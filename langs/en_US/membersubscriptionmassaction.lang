@@ -1,0 +1,15 @@
+# Copyright (C) 2026 iLLixM <iLLixM@proton.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+ModuleMemberSubscriptionMassactionName=Member subscription massaction (development)
+MSMDescription=Technical member selection assistant. Subscription processing is not implemented.
+MSMAction=Create member subscriptions (bulk)
+MSMTitle=Bulk member subscriptions — technical assistant
+MSMTechnicalNotice=Technical integration test – no subscriptions or invoices will be created.
+MSMDevelopmentStatus=Development scaffold 0.1.0-dev. No business processing or email delivery is available.
+MSMSelectedCount=Selected members: %s
+MSMMemberId=Member ID
+MSMCancel=Cancel and return to the member list
+MSMBack=Back to the member list
+MSMInvalidSelection=Select distinct positive member IDs within the mass-action limit.
+MSMSelectionUnavailable=The selection is invalid or contains unavailable members. Select accessible members within the mass-action limit.
+MSMInvalidRun=This selection is unavailable or expired. Start again from the member list.
