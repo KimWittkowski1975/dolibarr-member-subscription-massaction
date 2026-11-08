@@ -31,3 +31,12 @@ ST-04 through ST-08 require a real browser flow; CLI hook checks alone are insuf
 When browser access is unavailable, record NOT EXECUTED, never PASS by inference.
 No test should require executing another core business massaction: compare its menu
 presence without confirming delete, invoice, subscription or email actions.
+
+
+## ST-11 executed (2026-11-07)
+
+Real authenticated HTTP sessions: administrator sees the action; member-read-only
+user can read the list but cannot see/use the action or controller, including a forged
+POST with a valid CSRF token. A user without member rights is denied the list and
+controller. Rechecked after Phase 3A. HTTP 200 alone is not an authorization result.
+No account grants were changed. See docs/phase3a-validation.md for new browser cases.

@@ -1,12 +1,13 @@
 {
   "name": "illixm/dolibarr-member-subscription-massaction",
-  "description": "Technical scaffold for an external Dolibarr member subscription assistant",
+  "description": "Read-only interactive member subscription preview for Dolibarr",
   "type": "dolibarr-module",
   "license": "GPL-3.0-or-later",
   "require": {
     "php": ">=7.4"
   },
   "scripts": {
-    "test": "php test/unit/run.php"
+    "test": "php test/unit/run.php",
+    "test:preview": "php test/unit/preview.php"
   }
 }

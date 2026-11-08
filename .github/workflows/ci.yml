@@ -1,4 +1,4 @@
-name: Module scaffold
+name: Module preview
 on:
   push:
   pull_request:
@@ -24,3 +24,13 @@ jobs:
         run: git diff-tree --check --root -r HEAD
       - name: Unit contracts and structure
         run: php test/unit/run.php
+      - uses: actions/checkout@v4
+        with:
+          repository: Dolibarr/dolibarr
+          ref: 88ad132763be45e9620128c1830e41493e1cdd05
+          path: .test-core
+          persist-credentials: false
+      - name: Preview calculations against V22 calendar APIs
+        env:
+          DOLIBARR_TEST_ROOT: ${{ github.workspace }}/.test-core
+        run: php test/unit/preview.php

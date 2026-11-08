@@ -5,10 +5,11 @@ Phase 1 revision 2 is the accepted architecture: an independent wizard entered t
 `printFieldPreListTitle` when needed. No core hooks or Adherent overrides are added.
 
 The accompanying `requirements.csv` preserves all **71** requirements from that audit.
-Its porting statuses describe the planned functional port, not completed scaffold work.
+Original porting-assessment columns are retained. Added phase/status/evidence columns
+record actual implementation and distinguish read-only portions from deferred booking.
 The source remains PR #42620, commit `14c4b07ba86e7a320d61e75b28cb88a50ce54f77`.
-This phase implements only secure selection, navigation and technical integration.
-It neither replaces nor narrows the remaining business scope.
+Phase 3A adds read-only calculations and interactive previews. Booking, invoice/PDF
+creation and email remain future scope; preview success does not authorize writes.
 
 Mandatory later risk work:
 
@@ -21,6 +22,10 @@ Mandatory later risk work:
 - R16: V22 `Adherent::subscription()` does not fully propagate an `update_end_date()` failure;
   design and verify adapter consistency handling before accepting business writes.
 
-Future scope includes all amount/date/calendar/null-amount rules, previews and warnings,
-per-member transactions, optional invoices/third parties/PDF/mail, persistent results,
-permissions, entity isolation, browser behavior and V22–V25 qualification.
+Future scope includes per-member transactions, optional invoices/third parties/PDF/mail,
+persistent results, atomic replay handling and V22–V25 qualification. Preview rows
+include a fingerprint of computed values and relevant source/configuration fields,
+and an overlap snapshot. These prepare the confirmation design but are NOT a booking
+lock, durable journal, atomic replay guard or permission to skip revalidation.
+
+See phase3a-validation.md for calendar compatibility details and current evidence.
