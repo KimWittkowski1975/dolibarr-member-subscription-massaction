@@ -239,6 +239,10 @@ fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); 
 $post['autocreate'] = '1'; unset($post['invoice']);
 verify(!msmUpdatePreview($state, $post)['options']['autocreate'], 'OPT-08 contradictory forged input cannot grant creation');
 // Exercise the actual renderer, not a duplicate of its condition.
+// The real price() helper expects the standard application decimal configuration.
+$conf->global->MAIN_MAX_DECIMALS_UNIT = 2;
+$conf->global->MAIN_MAX_DECIMALS_TOT = 2;
+$conf->global->MAIN_MAX_DECIMALS_SHOWN = 2;
 $state['rows'] = array();
 foreach (array(array(true, true, true, false), array(false, true, true, true), array(true, false, true, true), array(true, true, false, true)) as $case) {
 	$state['options']['invoice'] = $case[0]; $state['options']['autocreate'] = true;

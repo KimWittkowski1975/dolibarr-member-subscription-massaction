@@ -128,3 +128,7 @@ The 47 implemented/partial requirement rows now point to concrete assertion labe
 and disclose remaining test gaps. The permanent test strategy is docs/test-strategy.md.
 The focused PR review found no new material security or integrity blocker; known
 read-only fixture gaps and later booking risks remain explicitly documented.
+
+The initial follow-up PHP 7.4 CI exposed missing standard decimal settings in the
+new synthetic renderer fixture. Explicit fixture values now let the real V22 price()
+helper run under both CI versions; production calculation code was not changed.
