@@ -53,8 +53,9 @@ refer to the successful rerun, not the initial harness attempts.
   START_AFTER overrides the base using today; FIRST_DAY_OF supports m, Y and 3m.
   The 3m rule preserves the reference's previous-end-minus-three-months convention;
   it is not silently replaced by a different quarter algorithm.
-- Missing duration defaults to 1y; a bare d/w/m/y means quantity 1. Explicit zero,
-  negative, malformed and sub-day units are rejected. No sub-day arithmetic is offered.
+- Historical Phase 3A behavior: missing duration defaulted to 1y; a bare d/w/m/y
+  meant quantity 1. Explicit zero was rejected; see the later V22 correction below.
+  Negative, malformed and sub-day durations remain rejected.
 - Exactly 1d ends on the following day, intentionally preserving the source exception.
   Other durations end one calendar day before the shifted date. End must be later
   than start, including after an explicit month/year-end alignment.
@@ -132,3 +133,14 @@ read-only fixture gaps and later booking risks remain explicitly documented.
 The initial follow-up PHP 7.4 CI exposed missing standard decimal settings in the
 new synthetic renderer fixture. Explicit fixture values now let the real V22 price()
 helper run under both CI versions; production calculation code was not changed.
+
+## Subsequent Phase 3B preparation correction: zero duration quantities
+
+V22.0.5 `AdherentType::fetch()` extracts the duration quantity and unit;
+`adherents/subscription.php` defaults an empty quantity to 1 and an absent unit to y.
+The module now interprets 0d/0w/0m/0y as 1d/1w/1m/1y, retaining its strict format
+validation. Missing raw duration still defaults to 1y. Only parsing changed;
+calendar overflow, timezone handling and the following-day exception remain intact.
+Focused preview assertions cover defaulted quantities, equal end dates, retained
+positive quantities and malformed inputs (requirement C02-04). This does not
+retroactively change the historical Phase 3A test results or authorize booking tests.

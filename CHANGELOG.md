@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Match V22 single-subscription defaults for zero membership-duration quantities.
+
 - Keep planned third-party creation dependent on invoice mode, including no-JavaScript forms.
 - Map preview requirements to concrete tests and retain sanitized available browser evidence.
 - Establish risk-based validation and compact reporting for subsequent phases.

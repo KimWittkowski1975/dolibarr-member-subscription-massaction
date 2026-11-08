@@ -97,7 +97,16 @@ foreach (array('UTC', 'Europe/Berlin') as $zone) {
 	}
 }
 date_default_timezone_set('UTC'); $conf->tzuserinputkey = 'gmt'; $conf->global = new stdClass();
-foreach (array('0d', '-1y', '2h', 'mn', '3s', '1.5m', 'xyz', '1Y', '9999999999999999y') as $duration) { fails(static function () use ($duration) { MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-01-01'), (object) array('duration' => $duration)); }, 'SubscriptionBulkInvalidDate'); }
+foreach (array('-1y', '-0y', '00y', '0.0y', '0h', '0', ' y', '2h', 'mn', '3s', '1.5m', 'xyz', '1Y', '9999999999999999y') as $duration) { fails(static function () use ($duration) { MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-01-01'), (object) array('duration' => $duration)); }, 'SubscriptionBulkInvalidDate'); }
+// V22 AdherentType::fetch plus the single-subscription form default zero to one.
+foreach (array('d', 'w', 'm', 'y') as $unit) {
+	verify(MsmPeriodService::duration((object) array('duration' => '0'.$unit)) === array(1, $unit), 'zero quantity defaults to one '.$unit);
+	verify(MsmPeriodService::duration((object) array('duration' => '1'.$unit)) === array(1, $unit), 'positive quantity retained '.$unit);
+	verify(MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-10-10'), (object) array('duration' => '0'.$unit)) === MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-10-10'), (object) array('duration' => '1'.$unit)), 'zero and one share end date '.$unit);
+}
+verify(MsmPeriodService::duration((object) array('duration' => '2y')) === array(2, 'y'), 'multiple years retained');
+verify(MsmPeriodService::duration((object) array()) === array(1, 'y'), 'missing duration defaults to year');
+verify(iso(MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-10-10'), (object) array('duration' => '0d'))) === '2026-10-11', 'zero day retains following-day exception');
 $now = stamp('2026-10-10');
 $member->datefin = stamp('2026-09-30'); $member->datevalid = stamp('2025-02-20');
 verify(iso(MsmPeriodService::subscriptionStartDateForBatch($member, $now)) === '2026-10-01', 'history priority');
