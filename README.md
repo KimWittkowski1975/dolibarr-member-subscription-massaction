@@ -85,3 +85,8 @@ Synthetic tests do not prove actual browser integration. Follow
 The complete phase-1 requirements and open risks are retained in
 [docs/porting-plan.md](docs/porting-plan.md) and [docs/requirements.csv](docs/requirements.csv).
 Do not publish a release until a permanent ID and real runtime checks are complete.
+
+Future changes follow [the test strategy](docs/test-strategy.md). Precise coverage
+references remain in [the requirement matrix](docs/requirements.csv); see
+[the coverage legend](docs/test-coverage.md). Invoice-dependent third-party planning
+is reset when invoices are disabled and the preview is refreshed, including without JavaScript.

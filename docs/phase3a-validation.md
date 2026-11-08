@@ -107,3 +107,24 @@ R05 (single/batch concurrency), R06 (nested transaction counters), R07 (replay/c
 R08 (mail hooks), R09 (real integration evidence), R16 (V22 update_end_date error
 propagation). Booking-related portions of all 71 requirements remain explicitly
 tracked as deferred or partial; none are removed by this phase.
+
+## Focused follow-up (2026-11-08)
+
+The invoice/third-party dependency is now enforced consistently by rendering and POST
+processing. Disabling invoice mode resets the previously checked dependent option on
+refresh, including without JavaScript. Reenabling invoices does not restore consent.
+A forged enabled option without third-party creation permission/module is rejected.
+Malformed options remain rejected before normalization; disabling an option grants no
+action. The calculation/date/overlap semantics and all business-write boundaries remain
+unchanged.
+
+The preview runner now passes **365 assertions** (353 retained plus 12 targeted options
+assertions). The existing scaffold runner remains at **87**. Nine targeted real HTTP
+assertions passed, including no-JavaScript transitions, tampering, CSRF and both
+restricted roles. See test/integration/browser-smoke.md for durable anonymized evidence
+and the distinction from the historical 13 Chrome cases.
+
+The 47 implemented/partial requirement rows now point to concrete assertion labels
+and disclose remaining test gaps. The permanent test strategy is docs/test-strategy.md.
+The focused PR review found no new material security or integrity blocker; known
+read-only fixture gaps and later booking risks remain explicitly documented.

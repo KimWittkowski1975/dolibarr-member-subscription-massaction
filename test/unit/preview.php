@@ -217,4 +217,36 @@ verify($a['amount'] !== $b['amount'] && $a['fingerprint'] !== $b['fingerprint'],
 foreach (array('2027-01-31' => '2027-03-02', '2028-01-31' => '2028-03-01') as $s => $e) { verify(iso(MsmPeriodService::subscriptionEndDateForBatch(stamp($s), (object) array('duration' => '1m'))) === $e, 'reference month overflow semantics'); }
 $conf->global->MEMBER_SUBSCRIPTION_START_FIRST_DAY_OF = '3m'; $member->datefin = stamp('2027-06-15');
 verify(iso(MsmPeriodService::subscriptionStartDateForBatch($member, $start)) === '2027-03-01', 'quarter correction based on previous end'); $conf->global = new stdClass();
+// OPT group: invoice/third-party dependency, including native forms without JavaScript.
+$conf->global = new stdClass(); $conf->modules['societe'] = 1; $user = new PreviewUser();
+$state = array('revision' => 0, 'ids' => array(1), 'rows' => array(1 => $previous), 'options' => array('invoice' => true, 'autocreate' => false, 'sendmail' => false, 'description' => ''), 'common' => '');
+$post = array('revision' => '0', 'action' => 'refresh', 'common' => '', 'description' => '', 'invoice' => '1', 'autocreate' => '1', 'start' => array(1 => '2026-01-10'), 'end' => array(1 => '2026-02-09'));
+$enabled = msmUpdatePreview($state, $post);
+verify($enabled['options']['autocreate'], 'OPT-01 allowed with invoice');
+$post['revision'] = '1'; unset($post['invoice']);
+$disabled = msmUpdatePreview($enabled, $post);
+verify(!$disabled['options']['invoice'] && !$disabled['options']['autocreate'], 'OPT-02 no-JS uncheck invoice clears stale checkbox');
+$post['revision'] = '2'; $post['invoice'] = '1'; unset($post['autocreate']);
+$reenabled = msmUpdatePreview($disabled, $post);
+verify($reenabled['options']['invoice'] && !$reenabled['options']['autocreate'], 'OPT-03 reenable does not restore consent');
+$post['revision'] = '0'; $post['autocreate'] = '1'; $user->denied = array('societe.creer');
+fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm'); // OPT-04 unauthorized forged option
+verify(!msmCanPlanThirdParty(true, $user), 'OPT-05 missing creation permission');
+$user->denied = array(); unset($conf->modules['societe']);
+fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm'); // OPT-06 missing module
+$conf->modules['societe'] = 1; $post['autocreate'] = array('1');
+fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm'); // OPT-07 malformed option
+$post['autocreate'] = '1'; unset($post['invoice']);
+verify(!msmUpdatePreview($state, $post)['options']['autocreate'], 'OPT-08 contradictory forged input cannot grant creation');
+// Exercise the actual renderer, not a duplicate of its condition.
+$state['rows'] = array();
+foreach (array(array(true, true, true, false), array(false, true, true, true), array(true, false, true, true), array(true, true, false, true)) as $case) {
+	$state['options']['invoice'] = $case[0]; $state['options']['autocreate'] = true;
+	if ($case[1]) { $conf->modules['societe'] = 1; } else { unset($conf->modules['societe']); }
+	$user->denied = $case[2] ? array() : array('societe.creer');
+	$html = msmRenderPreview($state, str_repeat('a', 32));
+	preg_match('/<input[^>]*name="autocreate"[^>]*>/', $html, $m);
+	verify(isset($m[0]) && (strpos($m[0], ' disabled') !== false) === $case[3] && (strpos($m[0], ' checked') !== false) === !$case[3], 'OPT-09 renderer dependency matrix');
+}
+$conf->modules['societe'] = 1; $user->denied = array();
 echo $passed." assertions passed (V22 calendar APIs, synthetic business data; no database connection).\n";

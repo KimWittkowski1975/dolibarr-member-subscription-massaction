@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Keep planned third-party creation dependent on invoice mode, including no-JavaScript forms.
+- Map preview requirements to concrete tests and retain sanitized available browser evidence.
+- Establish risk-based validation and compact reporting for subsequent phases.
+
 - Add read-only per-member amount, eligibility, period, description and overlap services.
 - Add interactive dates, manual-end preservation, explicit common/calendar actions and summaries.
 - Add simulation-only invoice, third-party and mail preflight, without a booking endpoint.

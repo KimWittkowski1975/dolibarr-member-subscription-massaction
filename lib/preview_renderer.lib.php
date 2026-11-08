@@ -28,8 +28,8 @@ function msmRenderPreview(array $state, $key)
 	$html .= msmDateField('common', $state['common'], $langs->transnoentities('SubscriptionBulkCommonStart'));
 	$html .= '<button class="button" name="action" value="common">'.msmText('SubscriptionBulkApplyCommon').'</button><br>';
 	foreach (array('invoice' => 'MSMPlanInvoice', 'sendmail' => 'MSMPlanMail', 'autocreate' => 'MSMPlanThirdParty') as $option => $label) {
-		$disabled = $option === 'autocreate' && (!isModEnabled('societe') || !$user->hasRight('societe', 'creer'));
-		$html .= '<label><input type="checkbox" name="'.$option.'" value="1"'.($state['options'][$option] ? ' checked' : '').($disabled ? ' disabled' : '').'> '.msmText($label).'</label><br>';
+		$disabled = $option === 'autocreate' && !msmCanPlanThirdParty($state['options']['invoice'], $user);
+		$html .= '<label><input type="checkbox" name="'.$option.'" value="1"'.($state['options'][$option] && !$disabled ? ' checked' : '').($disabled ? ' disabled' : '').'> '.msmText($label).'</label><br>';
 	}
 	$html .= '<label>'.msmText('SubscriptionBulkDescriptionLabel').' <input class="minwidth300" type="text" name="description" maxlength="1024" value="'.dol_escape_htmltag($state['options']['description']).'"></label>';
 	$html .= '<p>'.msmText('SubscriptionBulkDescriptionHelp').'</p></fieldset>';

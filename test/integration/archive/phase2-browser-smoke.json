@@ -1,0 +1,47 @@
+[
+  {
+    "case": "ST-03/04",
+    "result": "PASS",
+    "evidence": "Authenticated member list shows own action; no PHP error text."
+  },
+  {
+    "case": "ST-06/07/08",
+    "result": "PASS",
+    "evidence": "Actual checkbox selection and Confirm redirect: exactly the two selected IDs displayed; no IDs retained in report."
+  },
+  {
+    "case": "ST-14",
+    "result": "PASS",
+    "evidence": "Reload preserves the same read-only selection."
+  },
+  {
+    "case": "ST-13",
+    "result": "PASS",
+    "evidence": "Cancel POST returns to the member list without a massaction parameter."
+  },
+  {
+    "case": "ST-10",
+    "result": "PASS",
+    "evidence": "Authenticated direct GET without a valid run is denied."
+  },
+  {
+    "case": "ST-09-empty",
+    "result": "PASS",
+    "evidence": "Forged selection rejected on the real list POST; no wizard run opened."
+  },
+  {
+    "case": "ST-09-nonnumeric",
+    "result": "PASS",
+    "evidence": "Forged selection rejected on the real list POST; no wizard run opened."
+  },
+  {
+    "case": "ST-09-negative",
+    "result": "PASS",
+    "evidence": "Forged selection rejected on the real list POST; no wizard run opened."
+  },
+  {
+    "case": "ST-09-nested",
+    "result": "PASS",
+    "evidence": "Forged selection rejected on the real list POST; no wizard run opened."
+  }
+]

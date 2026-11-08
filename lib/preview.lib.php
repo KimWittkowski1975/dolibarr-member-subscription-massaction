@@ -136,9 +136,16 @@ function msmReadPreview(array $session, $key, $owner, $entity, $now)
 	return msmReadRun($proxy, $key, $owner, $entity, $now);
 }
 
+/** The planned third-party action requires invoice mode and its own permission. */
+function msmCanPlanThirdParty($invoice, $user)
+{
+	return $invoice && isModEnabled('societe') && $user->hasRight('societe', 'creer');
+}
+
 /** Validate the complete form, preserving only authorized date/option overrides. */
 function msmUpdatePreview(array $state, array $post)
 {
+	global $user;
 	$allowed = array('token', 'preview', 'revision', 'action', 'common', 'description', 'invoice', 'sendmail', 'autocreate', 'start', 'end');
 	if (array_diff(array_keys($post), $allowed) || !is_string($post['revision'] ?? null)
 		|| $post['revision'] !== (string) $state['revision'] || !is_string($post['action'] ?? null)) {
@@ -164,7 +171,12 @@ function msmUpdatePreview(array $state, array $post)
 		if (isset($post[$field]) && $post[$field] !== '1') { throw new InvalidArgumentException('MSMInvalidForm'); }
 		$state['options'][$field] = isset($post[$field]);
 	}
-	if ($state['options']['autocreate'] && !$state['options']['invoice']) { throw new InvalidArgumentException('MSMInvalidForm'); }
+	// A no-JavaScript form can still submit the previously checked dependent box.
+	// Disabling invoices only removes an option; it never grants an action.
+	if (!$state['options']['invoice']) { $state['options']['autocreate'] = false; }
+	if ($state['options']['autocreate'] && !msmCanPlanThirdParty(true, $user)) {
+		throw new InvalidArgumentException('MSMInvalidForm');
+	}
 	msmDescription($post['description'] ?? null, '', 1, 1);
 	$state['options']['description'] = $post['description'];
 	if (!is_string($post['common'] ?? null) || strlen($post['common']) > 10) { throw new InvalidArgumentException('MSMInvalidForm'); }

@@ -1,0 +1,42 @@
+{
+  "executed_at": "2026-11-08T16:46:20.253937+00:00",
+  "transport": "Real HTTP sessions; no JavaScript execution or browser rendering",
+  "cases": [
+    {
+      "case": "OPT-HTTP-01",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-02",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-03",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-04",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-05",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-06",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-08",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-07-reader",
+      "result": "PASS"
+    },
+    {
+      "case": "OPT-HTTP-07-restricted",
+      "result": "PASS"
+    }
+  ]
+}
