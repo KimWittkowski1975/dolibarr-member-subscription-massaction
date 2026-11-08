@@ -2,7 +2,7 @@
 
 Phase 1 revision 2 is the accepted architecture: an independent wizard entered through
 `memberlist` / `addMoreMassActions` / `doMassActions`. The future result notice uses
-`printFieldPreListTitle` when needed. No core hooks or Adherent overrides are added.
+`printFieldPreListTitle` when needed. No core hooks are patched. Phase 3B adds a module-owned Adherent subclass solely to observe update_end_date failures (R16).
 
 The accompanying `requirements.csv` preserves all **71** requirements from that audit.
 Original porting-assessment columns are retained. Added phase/status/evidence columns
@@ -29,3 +29,15 @@ and an overlap snapshot. These prepare the confirmation design but are NOT a boo
 lock, durable journal, atomic replay guard or permission to skip revalidation.
 
 See phase3a-validation.md for calendar compatibility details and current evidence.
+
+## Phase 3B implementation (supersedes the earlier future-scope statements)
+
+Booking and independent confirmation mail are implemented on V22.0.5. Invoice,
+third-party, PDF and payment workflows remain deferred and disabled in the UI.
+The adapter observes the actual return of the core end-date update and validates
+the subscription and latest-start history before committing its own transaction.
+There is no new table, operations journal, queue, cron job or core modification.
+The existing selection token plus revision becomes a consumed confirmation; session
+checkpoints precede booking and mail. This is not crash-safe exactly-once delivery.
+
+See phase3b-validation.md for precise risk boundaries and the real integration gate.
