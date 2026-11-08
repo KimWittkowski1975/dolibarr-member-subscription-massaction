@@ -1,4 +1,4 @@
-name: Module preview
+name: Module subscriptions
 on:
   push:
   pull_request:
@@ -30,7 +30,9 @@ jobs:
           ref: 88ad132763be45e9620128c1830e41493e1cdd05
           path: .test-core
           persist-credentials: false
-      - name: Preview calculations against V22 calendar APIs
+      - name: Preview, booking and mail contracts against V22 APIs
         env:
           DOLIBARR_TEST_ROOT: ${{ github.workspace }}/.test-core
-        run: php test/unit/preview.php
+        run: |
+          php test/unit/booking.php
+          php test/unit/maildelivery.php
