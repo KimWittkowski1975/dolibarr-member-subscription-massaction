@@ -1,11 +1,12 @@
 # Member Subscription Massaction for Dolibarr
 
-**Development scaffold: 0.1.0-dev. No subscriptions, invoices, payments,
+**Development preview: 0.1.0-dev (unreleased). No subscriptions, invoices, payments,
 third parties, PDFs or emails are created. This is not a feature release.**
 
-An external module that adds a member-list action and an authenticated technical
-assistant showing the selected member IDs. Existing core actions remain available.
-The complete functional port is planned, not implemented in this scaffold.
+An external module that adds a member-list action and an authenticated, interactive
+subscription preview. It reads real member/type/history data and calculates individual
+amounts, calendar periods, descriptions, duplicate errors and overlap warnings.
+Existing core actions remain available. **Booking is not implemented.**
 
 ## Origin and scope
 
@@ -13,13 +14,13 @@ Derived from the architecture of [Dolibarr PR #42620](https://github.com/Dolibar
 feature commit `14c4b07ba86e7a320d61e75b28cb88a50ce54f77`.
 The module does not import the core history or change core PHP/language files.
 The descriptor follows the Dolibarr 22.0.5 ModuleBuilder template; its original
-copyright notices are retained. Other scaffold logic is newly implemented.
+copyright notices are retained. Preview rules are ported by composition into module-owned services; no Core classes are patched.
 Code is GPL-3.0-or-later; see COPYING. No KSeF or FacturX code is included.
 
 ## Development baseline
 
 Dolibarr **22.0.5**, PHP **8.2** locally. PHP 7.4 is the provisional syntax minimum;
-CI covers the synthetic scaffold contracts on 7.4 and 8.2. This is not a complete
+CI covers the scaffold contracts and preview regressions using pinned V22 calendar helpers on 7.4 and 8.2. This is not a complete
 runtime compatibility claim. V23–V25 compatibility will be tested in later phases.
 
 Module ID **584620 is temporary**, checked against local descriptors and the
@@ -41,8 +42,9 @@ availability does not imply a released, installable production module.
    No new tables, document directories, menus or redundant permissions are created.
 6. Internal users need both member read and subscription creation permissions.
 7. Select members in the member list, choose **Create member subscriptions (bulk)**
-   and press the existing **Confirm** button. The hook redirects to the technical
-   assistant showing IDs and count. It does not display a financial preview.
+   and press the existing **Confirm** button. The hook opens the financial preview.
+   Change individual dates, reset one end, or explicitly apply a common start/calendar
+   rule. Invoice, third-party and mail checkboxes simulate future actions only.
 8. Cancel invalidates only this run and returns to the list; the Back link leaves
    it available until expiry. Deactivation removes the action from the list.
 
@@ -56,12 +58,14 @@ Selections are strictly positive unique IDs, bounded by `MAIN_LIMIT_FOR_MASS_ACT
 (default 1000). Malformed, duplicate, missing and inaccessible IDs reject the whole
 selection. Shared entities follow `getEntity('adherent')` and object access checks.
 Permissions and access are rechecked when opening the assistant.
-Only IDs are stored in an owner/entity-bound session namespace, at most five runs,
-with random 128-bit identifiers and a 15-minute lifetime. A run identifier is not a
+The original selection store keeps IDs for 15 minutes. A separate `msm_previews`
+namespace holds at most five owner/entity-bound previews for one hour, with random
+128-bit identifiers. Each form carries a revision to reject stale POSTs. Every
+refresh reloads business values; POST cannot override member IDs, amounts or types. A run identifier is not a
 replacement for authentication or CSRF. POST actions validate the session token;
 redirect destinations are fixed internal paths. No untrusted return URL is used.
 
-GET reload does not consume the selection or perform business work. Future booking
+GET reload reads current business data without changing business records. Future booking
 requires a separate single-use confirmation contract; do not reuse this read-only
 run as authorization to create subscriptions.
 
@@ -71,10 +75,18 @@ deferred until there is a result to display.
 
 ## Checks and next phase
 
-Run `php test/unit/run.php` or `composer test` (no dependency installation needed).
+Run `php test/unit/run.php` and
+`DOLIBARR_TEST_ROOT=/path/to/dolibarr php test/unit/preview.php` (no dependencies
+or database bootstrap). The latter requires a V22.0.5 source checkout.
+See [Phase 3A validation](docs/phase3a-validation.md) for evidence and limitations.
 Lint PHP files and run `git diff --check`; CI also checks the initial commit.
 Synthetic tests do not prove actual browser integration. Follow
 [test/integration/smoke.md](test/integration/smoke.md) on an approved installation.
 The complete phase-1 requirements and open risks are retained in
 [docs/porting-plan.md](docs/porting-plan.md) and [docs/requirements.csv](docs/requirements.csv).
 Do not publish a release until a permanent ID and real runtime checks are complete.
+
+Future changes follow [the test strategy](docs/test-strategy.md). Precise coverage
+references remain in [the requirement matrix](docs/requirements.csv); see
+[the coverage legend](docs/test-coverage.md). Invoice-dependent third-party planning
+is reset when invoices are disabled and the preview is refreshed, including without JavaScript.

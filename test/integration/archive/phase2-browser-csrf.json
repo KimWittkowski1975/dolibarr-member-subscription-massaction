@@ -1,0 +1,6 @@
+{
+  "forged_cancel_denied": true,
+  "valid_run_preserved": true,
+  "php_error": false,
+  "method": "Authenticated Chrome POST with invalid CSRF token, followed by GET of the same run"
+}
