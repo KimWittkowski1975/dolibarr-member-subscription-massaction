@@ -288,3 +288,38 @@ claim across lost sessions, process failures or external hooks. The real HTTP ga
 INT-03 is now covered within the qualifications above; independent final review remains.
 PR #2 stays Draft. Existing regression/CI results remain historical evidence for the
 unchanged implementation; this follow-up changes documentation only.
+
+
+## 2026-11-09 — Manual Phase 3B browser acceptance
+
+**MANUAL BROWSER ACCEPTANCE: PASS (9/9).**
+
+The project owner completed the manual browser acceptance of the Phase 3B user interface in the isolated Dolibarr 22.0.5 test installation.
+
+| Test | Acceptance criterion | Result |
+|---|---|---|
+| UI-01 | Correct subscription preview page heading | PASS |
+| UI-02 | Redundant Cancel button removed from the preview | PASS |
+| UI-03 | Back-to-member-list link remains functional | PASS |
+| UI-04 | Correct booking confirmation heading | PASS |
+| UI-05 | Correct German booking results heading | PASS |
+| UI-06 | Member first and last names displayed correctly | PASS |
+| UI-07 | Planned invoice-line description heading preserved | PASS |
+| UI-08 | Contribution link opens the correct member contribution page with matching contribution ID | PASS |
+| UI-09 | Refreshing the completed results page does not trigger another booking | PASS |
+
+**Operator observations:** None.
+
+**Evidence and interpretation:**
+
+- All nine checks were performed manually and explicitly confirmed by the project owner.
+- The requested UI adjustments are accepted.
+- No additional UI corrections were requested.
+- UI-09 confirms that refreshing the completed results page does not initiate another booking.
+- The separate authenticated HTTP-02 test confirms that replaying the original booking POST does not create another contribution.
+- The manual browser checks and authenticated HTTP integration tests are complementary evidence, not interchangeable tests.
+- No new business-data modifications were performed as part of this documentation update.
+
+**Conclusion:** Manual Phase 3B browser acceptance is complete. No additional UI changes or repeated bulk booking are required on the basis of these results.
+
+The existing authenticated HTTP follow-up retains its classification **HTTP REPLAY VALIDATED WITH LIMITATIONS**. The documented aggregate user-table hash limitation, session-loss and crash limitations, and remaining independent final code review are unaffected.
