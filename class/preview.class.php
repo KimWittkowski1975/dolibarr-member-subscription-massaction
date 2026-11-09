@@ -276,7 +276,7 @@ class MsmPreviewService
 		$row['status'] = $row['errors'] ? 'error' : ($row['warnings'] ? 'warning' : 'ready');
 		// Kept in the session only; detects changed amounts, recipients, links and settings.
 		$source = array($this->member->typeid, $this->member->socid, $this->member->entity, $this->member->email, $this->member->default_lang, $this->member->morphy, $this->member->company, $this->member->address, $this->member->zip, $this->member->town, $this->member->country_id, $this->member->phone);
-		foreach (array('ADHERENT_PRODUCT_ID_FOR_SUBSCRIPTIONS', 'ADHERENT_VAT_FOR_SUBSCRIPTIONS', 'ADHERENT_EMAIL_TEMPLATE_SUBSCRIPTION', 'FACTURE_ADDON_PDF') as $setting) {
+		foreach (array('ADHERENT_PRODUCT_ID_FOR_SUBSCRIPTIONS', 'ADHERENT_VAT_FOR_SUBSCRIPTIONS', 'ADHERENT_EMAIL_TEMPLATE_SUBSCRIPTION', 'ADHERENT_MAIL_FROM', 'FACTURE_ADDON_PDF') as $setting) {
 			$source[] = getDolGlobalString($setting);
 		}
 		$row['fingerprint'] = hash('sha256', json_encode(array($row, $source, $invoice, $sendmail, $autocreate, $descriptiontemplate)));

@@ -41,6 +41,8 @@ if ($method !== 'GET' && $method !== 'POST') {
 require_once __DIR__.'/lib/preview.lib.php';
 require_once __DIR__.'/class/period.class.php';
 require_once __DIR__.'/lib/preview_renderer.lib.php';
+require_once __DIR__.'/lib/booking.lib.php';
+require_once __DIR__.'/lib/booking_renderer.lib.php';
 $langs->load('members');
 $error = '';
 try {
@@ -53,32 +55,67 @@ try {
 	}
 	$key = $method === 'POST' ? ($_POST['preview'] ?? null) : ($_GET['preview'] ?? null);
 	$state = msmReadPreview($_SESSION, $key, (int) $user->id, (int) $conf->entity, dol_now());
+	// Migrate old previews without carrying invoice consent into a booking.
+	if (($state['format'] ?? 0) !== 3) {
+		$state['format'] = 3; $state['phase'] = 'preview'; $state['revision']++;
+		$state['options']['invoice'] = false; $state['options']['autocreate'] = false;
+		$state['rows'] = array(); $_SESSION['msm_previews'][$key] = $state;
+	}
 } catch (Exception $e) {
 	accessforbidden($langs->trans('MSMInvalidRun'));
 }
 if ($method === 'POST') {
 	if (!msmValidCsrf($_POST['token'] ?? null, $_SESSION)) { accessforbidden(); }
-	if (($_POST['action'] ?? null) === 'cancel') {
+	if (($_POST['action'] ?? null) === 'cancel' && $state['phase'] === 'preview') {
 		unset($_SESSION['msm_previews'][$key]);
 		header('Location: '.msmListUrl(), true, 303);
 		exit;
 	}
 	try {
-		$state = msmUpdatePreview($state, $_POST);
-		$state = msmEvaluatePreview($db, $user, $state);
-		$_SESSION['msm_previews'][$key] = $state;
-	} catch (InvalidArgumentException $e) {
-		$_SESSION['msm_previews'][$key]['flash'] = in_array($e->getMessage(), array('SubscriptionBulkInvalidDate', 'SubscriptionBulkDescriptionInvalid'), true) ? $e->getMessage() : 'MSMInvalidForm';
+		$action = $_POST['action'] ?? null;
+		if ($action === 'book') {
+			$state = msmConsumeConfirmation($state, $_POST);
+			$_SESSION['msm_previews'][$key] = $state;
+			// Persist consumed state before releasing PHP's session lock and before any write.
+			if (!session_write_close()) { throw new RuntimeException('MSMSessionFailure'); }
+			require_once __DIR__.'/class/booking.class.php';
+			require_once __DIR__.'/class/mail.class.php';
+			$save = static function ($updated) use ($key) {
+				if (!session_start()) { throw new RuntimeException('MSMSessionFailure'); }
+				$current = $_SESSION['msm_previews'][$key] ?? null;
+				if (!$current || $current['phase'] !== 'processing' || $current['revision'] !== $updated['revision']) {
+					session_write_close(); throw new RuntimeException('MSMSessionFailure');
+				}
+				$_SESSION['msm_previews'][$key] = $updated;
+				if (!session_write_close()) { throw new RuntimeException('MSMSessionFailure'); }
+			};
+			$save($state); // Read back consumed state before the first database side effect.
+			$state = msmProcessBooking($state, new MsmBookingService($db), new MsmSubscriptionMail($db), $user, $save);
+		} elseif ($action === 'edit') {
+			msmBookingPost($state, $_POST, 'edit');
+			if ($state['phase'] !== 'confirm') { throw new InvalidArgumentException('MSMInvalidForm'); }
+			$state['phase'] = 'preview'; $state['revision']++;
+			$_SESSION['msm_previews'][$key] = $state;
+		} else {
+			$state = msmUpdatePreview($state, $_POST);
+			$state = msmEvaluatePreview($db, $user, $state);
+			if ($action === 'confirm') {
+				if (count($state['ids']) > 50) { throw new InvalidArgumentException('MSMBatchLimit'); }
+				$state['phase'] = 'confirm';
+			}
+			$_SESSION['msm_previews'][$key] = $state;
+		}
 	} catch (Throwable $e) {
-		// Fail closed. Never show an earlier successful result as the current validation.
-		$_SESSION['msm_previews'][$key]['rows'] = array();
-		$_SESSION['msm_previews'][$key]['flash'] = 'SubscriptionBulkDatabaseError';
+		// Once consumed, keep results/pending uncertainty intact; never reopen booking.
+		if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['msm_previews'][$key])) {
+			$_SESSION['msm_previews'][$key]['flash'] = in_array($e->getMessage(), array('SubscriptionBulkInvalidDate', 'SubscriptionBulkDescriptionInvalid', 'MSMBatchLimit'), true) ? $e->getMessage() : 'MSMInvalidForm';
+		}
 	}
 	header('Location: '.dol_buildpath('/membersubscriptionmassaction/subscription.php', 1).'?preview='.$key, true, 303);
 	exit;
 }
 try {
-	$state = msmEvaluatePreview($db, $user, $state);
+	if ($state['phase'] === 'preview') { $state = msmEvaluatePreview($db, $user, $state); }
 	$error = $state['flash'] ?? '';
 	unset($state['flash']);
 	$_SESSION['msm_previews'][$key] = $state;
@@ -86,10 +123,11 @@ try {
 	$error = 'SubscriptionBulkDatabaseError';
 	$state['rows'] = array();
 }
-llxHeader('', $langs->trans('MSMTitle'));
-print load_fiche_titre($langs->trans('MSMTitle'));
+$titlekey = msmPageTitleKey($state['phase']);
+llxHeader('', $langs->trans($titlekey));
+print load_fiche_titre($langs->trans($titlekey));
 if ($error) { print '<div class="error">'.msmText($error).'</div>'; }
-if ($state['rows']) { print msmRenderPreview($state, $key); }
+if ($state['rows']) { print $state['phase'] === 'preview' ? msmRenderPreview($state, $key) : msmRenderBooking($state, $key); }
 else { print '<p><a href="'.dol_escape_htmltag(msmListUrl()).'">'.msmText('MSMBack').'</a></p>'; }
 llxFooter();
 $db->close();

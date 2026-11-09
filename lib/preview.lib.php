@@ -117,13 +117,19 @@ function msmCreatePreview(array &$session, array $selection, $now)
 	global $langs;
 	$runs = $session['msm_previews'] ?? array();
 	foreach ($runs as $key => $run) {
-		if ($run['expires'] <= $now) { unset($runs[$key]); }
+		if ($run['expires'] <= $now && ($run['phase'] ?? '') !== 'processing') { unset($runs[$key]); }
 	}
-	while (count($runs) >= 5) { array_shift($runs); }
+	while (count($runs) >= 5) {
+		$removed = false;
+		foreach ($runs as $oldkey => $oldrun) {
+			if (($oldrun['phase'] ?? '') !== 'processing') { unset($runs[$oldkey]); $removed = true; break; }
+		}
+		if (!$removed) { throw new RuntimeException('MSMInvalidRun'); }
+	}
 	$key = bin2hex(random_bytes(16));
 	$runs[$key] = array('owner' => $selection['owner'], 'entity' => $selection['entity'], 'expires' => $now + 3600,
-		'ids' => $selection['ids'], 'revision' => 0, 'rows' => array(), 'input' => array(), 'common' => '',
-		'options' => array('invoice' => true, 'sendmail' => (bool) getDolGlobalInt('ADHERENT_DEFAULT_SENDINFOBYMAIL'), 'autocreate' => false,
+		'format' => 3, 'phase' => 'preview', 'ids' => $selection['ids'], 'revision' => 0, 'rows' => array(), 'input' => array(), 'common' => '',
+		'options' => array('invoice' => false, 'sendmail' => (bool) getDolGlobalInt('ADHERENT_DEFAULT_SENDINFOBYMAIL'), 'autocreate' => false,
 			'description' => $langs->transnoentities('Subscription').', {Member type}, {Start date} - {End date}'));
 	$session['msm_previews'] = $runs;
 	return $key;
@@ -146,6 +152,7 @@ function msmCanPlanThirdParty($invoice, $user)
 function msmUpdatePreview(array $state, array $post)
 {
 	global $user;
+	if (isset($state['phase']) && $state['phase'] !== 'preview') { throw new InvalidArgumentException('MSMInvalidForm'); }
 	$allowed = array('token', 'preview', 'revision', 'action', 'common', 'description', 'invoice', 'sendmail', 'autocreate', 'start', 'end');
 	if (array_diff(array_keys($post), $allowed) || !is_string($post['revision'] ?? null)
 		|| $post['revision'] !== (string) $state['revision'] || !is_string($post['action'] ?? null)) {
@@ -154,7 +161,7 @@ function msmUpdatePreview(array $state, array $post)
 	$action = $post['action'];
 	$reset = null;
 	if (preg_match('/^reset:([1-9][0-9]*)$/D', $action, $m)) { $reset = (int) $m[1]; }
-	if (!in_array($action, array('refresh', 'common', 'calendar'), true) && !in_array($reset, $state['ids'], true)) {
+	if (!in_array($action, array('refresh', 'common', 'calendar', 'confirm'), true) && !in_array($reset, $state['ids'], true)) {
 		throw new InvalidArgumentException('MSMInvalidForm');
 	}
 	if ($action === 'calendar' && !getDolGlobalInt('MEMBER_SUBSCRIPTION_SUGGEST_END_OF_MONTH') && !getDolGlobalInt('MEMBER_SUBSCRIPTION_SUGGEST_END_OF_YEAR')) {
@@ -171,6 +178,7 @@ function msmUpdatePreview(array $state, array $post)
 		if (isset($post[$field]) && $post[$field] !== '1') { throw new InvalidArgumentException('MSMInvalidForm'); }
 		$state['options'][$field] = isset($post[$field]);
 	}
+	if (!empty($post['invoice']) || !empty($post['autocreate'])) { throw new InvalidArgumentException('MSMInvalidForm'); }
 	// A no-JavaScript form can still submit the previously checked dependent box.
 	// Disabling invoices only removes an option; it never grants an action.
 	if (!$state['options']['invoice']) { $state['options']['autocreate'] = false; }

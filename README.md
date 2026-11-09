@@ -1,12 +1,20 @@
 # Member Subscription Massaction for Dolibarr
 
-**Development preview: 0.1.0-dev (unreleased). No subscriptions, invoices, payments,
-third parties, PDFs or emails are created. This is not a feature release.**
+**Unreleased Phase 3B: subscription booking and optional confirmation email are
+implemented and validated within the documented Dolibarr 22.0.5 scope. Do not use
+in production.**
 
-An external module that adds a member-list action and an authenticated, interactive
-subscription preview. It reads real member/type/history data and calculates individual
-amounts, calendar periods, descriptions, duplicate errors and overlap warnings.
-Existing core actions remain available. **Booking is not implemented.**
+Real booking/database integration and authenticated HTTP replay tests have been
+performed; manual browser acceptance passed 9/9. The owner confirmed receipt of the
+ten original emails. The independent final review concluded **APPROVED WITH CONDITIONS**;
+its documentation and mail-comment findings are addressed by this focused follow-up,
+subject to final diff/CI verification. This is not unrestricted production approval.
+See [Phase 3B validation](docs/phase3b-validation.md) for evidence, limitations and
+the owner's scoped residual-risk acceptance.
+
+The module adds an authenticated member-list preview, an explicit confirmation and
+per-member booking results. It never creates invoices, third parties, PDFs, payments
+or bank entries itself. These options are disabled and rejected server-side.
 
 ## Origin and scope
 
@@ -44,9 +52,12 @@ availability does not imply a released, installable production module.
 7. Select members in the member list, choose **Create member subscriptions (bulk)**
    and press the existing **Confirm** button. The hook opens the financial preview.
    Change individual dates, reset one end, or explicitly apply a common start/calendar
-   rule. Invoice, third-party and mail checkboxes simulate future actions only.
-8. Cancel invalidates only this run and returns to the list; the Back link leaves
-   it available until expiry. Deactivation removes the action from the list.
+   rule. Select confirmation email independently, then review the separate confirmation.
+   Confirm each displayed overlap explicitly and use **Book confirmed subscriptions now**.
+   Missing overlap consent skips that row. Invoice and third-party options remain disabled.
+8. The preview provides a Back link to the member list without invalidating the
+   preview. It remains available until normal expiry. No separate Cancel button is
+   rendered; an internal cancel route is retained. Deactivation removes the list action.
 
 V22 clears `massaction` without `confirmmassaction`. The module uses that existing
 list contract and `doMassActions` before response output; it does not introduce a
@@ -65,22 +76,34 @@ refresh reloads business values; POST cannot override member IDs, amounts or typ
 replacement for authentication or CSRF. POST actions validate the session token;
 redirect destinations are fixed internal paths. No untrusted return URL is used.
 
-GET reload reads current business data without changing business records. Future booking
-requires a separate single-use confirmation contract; do not reuse this read-only
-run as authorization to create subscriptions.
+GET never books. Confirmation is consumed and saved before processing. Member rows
+are locked and revalidated within independent InnoDB transactions; the V22 end-date
+update return and actual saved values are checked before commit. Only confirmed
+commits can proceed to mail. Results survive reload within the session; uncertain
+outcomes require manual database inspection, never an automatic retry.
 
-No unnecessary JavaScript is included. `dolBlockUI()` belongs to the later actual
-booking step, not this read-only assistant. The future result-notice hook is likewise
-deferred until there is a result to display.
+Booking currently supports the mysqli driver with MySQL/MariaDB and InnoDB only.
+At most 50 members may be confirmed together; use smaller batches when transport is
+slow. This cap is not a timeout guarantee. A crash leaves pending rows uncertain.
+There is no durable operation journal, SMTP queue or exactly-once claim. Core and
+third-party actions need not honor the module's member-row lock. Core triggers still
+run and can have nontransactional side effects; inventory them before real tests.
+
+The results page uses plain escaped HTML and remains available without a timed toast.
+No JavaScript is required. See [Phase 3B validation](docs/phase3b-validation.md) for
+transaction, crash, hook and unexecuted integration-test boundaries.
 
 ## Checks and next phase
 
 Run `php test/unit/run.php` and
-`DOLIBARR_TEST_ROOT=/path/to/dolibarr php test/unit/preview.php` (no dependencies
-or database bootstrap). The latter requires a V22.0.5 source checkout.
-See [Phase 3A validation](docs/phase3a-validation.md) for evidence and limitations.
+`DOLIBARR_TEST_ROOT=/path/to/dolibarr php test/unit/booking.php` and
+`php test/unit/maildelivery.php` (no dependencies
+or database bootstrap). The booking runner includes the existing preview runner and requires a V22.0.5 checkout.
+See [Phase 3B validation](docs/phase3b-validation.md) for current evidence and limitations;
+[Phase 3A validation](docs/phase3a-validation.md) preserves historical evidence.
 Lint PHP files and run `git diff --check`; CI also checks the initial commit.
-Synthetic tests do not prove actual browser integration. Follow
+Synthetic tests alone do not prove browser integration; the separate owner-performed
+UI-01–UI-09 acceptance is recorded in Phase 3B validation. For future checks, follow
 [test/integration/smoke.md](test/integration/smoke.md) on an approved installation.
 The complete phase-1 requirements and open risks are retained in
 [docs/porting-plan.md](docs/porting-plan.md) and [docs/requirements.csv](docs/requirements.csv).
@@ -88,5 +111,5 @@ Do not publish a release until a permanent ID and real runtime checks are comple
 
 Future changes follow [the test strategy](docs/test-strategy.md). Precise coverage
 references remain in [the requirement matrix](docs/requirements.csv); see
-[the coverage legend](docs/test-coverage.md). Invoice-dependent third-party planning
-is reset when invoices are disabled and the preview is refreshed, including without JavaScript.
+[the coverage legend](docs/test-coverage.md). Legacy Phase 3A previews are invalidated for confirmation and normalized to disabled
+invoice/third-party options. Confirmation mail remains independent of invoices.

@@ -97,7 +97,16 @@ foreach (array('UTC', 'Europe/Berlin') as $zone) {
 	}
 }
 date_default_timezone_set('UTC'); $conf->tzuserinputkey = 'gmt'; $conf->global = new stdClass();
-foreach (array('0d', '-1y', '2h', 'mn', '3s', '1.5m', 'xyz', '1Y', '9999999999999999y') as $duration) { fails(static function () use ($duration) { MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-01-01'), (object) array('duration' => $duration)); }, 'SubscriptionBulkInvalidDate'); }
+foreach (array('-1y', '-0y', '00y', '0.0y', '0h', '0', ' y', '2h', 'mn', '3s', '1.5m', 'xyz', '1Y', '9999999999999999y') as $duration) { fails(static function () use ($duration) { MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-01-01'), (object) array('duration' => $duration)); }, 'SubscriptionBulkInvalidDate'); }
+// V22 AdherentType::fetch plus the single-subscription form default zero to one.
+foreach (array('d', 'w', 'm', 'y') as $unit) {
+	verify(MsmPeriodService::duration((object) array('duration' => '0'.$unit)) === array(1, $unit), 'zero quantity defaults to one '.$unit);
+	verify(MsmPeriodService::duration((object) array('duration' => '1'.$unit)) === array(1, $unit), 'positive quantity retained '.$unit);
+	verify(MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-10-10'), (object) array('duration' => '0'.$unit)) === MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-10-10'), (object) array('duration' => '1'.$unit)), 'zero and one share end date '.$unit);
+}
+verify(MsmPeriodService::duration((object) array('duration' => '2y')) === array(2, 'y'), 'multiple years retained');
+verify(MsmPeriodService::duration((object) array()) === array(1, 'y'), 'missing duration defaults to year');
+verify(iso(MsmPeriodService::subscriptionEndDateForBatch(stamp('2026-10-10'), (object) array('duration' => '0d'))) === '2026-10-11', 'zero day retains following-day exception');
 $now = stamp('2026-10-10');
 $member->datefin = stamp('2026-09-30'); $member->datevalid = stamp('2025-02-20');
 verify(iso(MsmPeriodService::subscriptionStartDateForBatch($member, $now)) === '2026-10-01', 'history priority');
@@ -147,8 +156,8 @@ $rows = array(array('status' => 'ready', 'errors' => array(), 'start' => 1, 'end
 verify(msmPreviewCounts($rows) === array('selected' => 3, 'ready' => 2, 'skipped' => 1), 'preview counts');
 verify(count(msmPreviewWarnings($rows)) === 2, 'different amounts and periods');
 verify(strpos(msmDateField('end[1]', '2026-01-01', '<script>'), '<script>') === false, 'HTML escaping');
-// Production sources must not contain a business write path or locking query.
-foreach (glob(__DIR__.'/../../class/*.php') as $file) {
+// Preview-only services must not contain a business write path or locking query.
+foreach (array(__DIR__.'/../../class/preview.class.php', __DIR__.'/../../class/period.class.php', __DIR__.'/../../class/actions_membersubscriptionmassaction.class.php') as $file) {
 	$source = file_get_contents($file);
 	verify(!preg_match('/->(?:subscription|subscriptionComplementaryActions|create|validate|generateDocument|sendEmail)\s*\(|FOR UPDATE|\b(?:INSERT INTO|UPDATE llx_|DELETE FROM)\b/', $source), 'read-only service structure');
 }
@@ -221,23 +230,16 @@ verify(iso(MsmPeriodService::subscriptionStartDateForBatch($member, $start)) ===
 $conf->global = new stdClass(); $conf->modules['societe'] = 1; $user = new PreviewUser();
 $state = array('revision' => 0, 'ids' => array(1), 'rows' => array(1 => $previous), 'options' => array('invoice' => true, 'autocreate' => false, 'sendmail' => false, 'description' => ''), 'common' => '');
 $post = array('revision' => '0', 'action' => 'refresh', 'common' => '', 'description' => '', 'invoice' => '1', 'autocreate' => '1', 'start' => array(1 => '2026-01-10'), 'end' => array(1 => '2026-02-09'));
+fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm');
+unset($post['invoice'], $post['autocreate']); $post['sendmail'] = '1';
 $enabled = msmUpdatePreview($state, $post);
-verify($enabled['options']['autocreate'], 'OPT-01 allowed with invoice');
-$post['revision'] = '1'; unset($post['invoice']);
-$disabled = msmUpdatePreview($enabled, $post);
-verify(!$disabled['options']['invoice'] && !$disabled['options']['autocreate'], 'OPT-02 no-JS uncheck invoice clears stale checkbox');
-$post['revision'] = '2'; $post['invoice'] = '1'; unset($post['autocreate']);
-$reenabled = msmUpdatePreview($disabled, $post);
-verify($reenabled['options']['invoice'] && !$reenabled['options']['autocreate'], 'OPT-03 reenable does not restore consent');
-$post['revision'] = '0'; $post['autocreate'] = '1'; $user->denied = array('societe.creer');
-fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm'); // OPT-04 unauthorized forged option
-verify(!msmCanPlanThirdParty(true, $user), 'OPT-05 missing creation permission');
-$user->denied = array(); unset($conf->modules['societe']);
-fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm'); // OPT-06 missing module
-$conf->modules['societe'] = 1; $post['autocreate'] = array('1');
-fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm'); // OPT-07 malformed option
-$post['autocreate'] = '1'; unset($post['invoice']);
-verify(!msmUpdatePreview($state, $post)['options']['autocreate'], 'OPT-08 contradictory forged input cannot grant creation');
+verify($enabled['options']['sendmail'] && !$enabled['options']['invoice'] && !$enabled['options']['autocreate'], 'OPT-01 independent mail without invoices');
+foreach (array('invoice', 'autocreate') as $option) {
+	foreach (array('1', array('1'), 'yes') as $value) {
+		$bad = $post; $bad[$option] = $value;
+		fails(static function () use ($state, $bad) { msmUpdatePreview($state, $bad); }, 'MSMInvalidForm');
+	}
+}
 // Exercise the actual renderer, not a duplicate of its condition.
 // The real price() helper expects the standard application decimal configuration.
 $conf->global->MAIN_MAX_DECIMALS_UNIT = 2;
@@ -250,7 +252,7 @@ foreach (array(array(true, true, true, false), array(false, true, true, true), a
 	$user->denied = $case[2] ? array() : array('societe.creer');
 	$html = msmRenderPreview($state, str_repeat('a', 32));
 	preg_match('/<input[^>]*name="autocreate"[^>]*>/', $html, $m);
-	verify(isset($m[0]) && (strpos($m[0], ' disabled') !== false) === $case[3] && (strpos($m[0], ' checked') !== false) === !$case[3], 'OPT-09 renderer dependency matrix');
+	verify(isset($m[0]) && strpos($m[0], ' disabled') !== false && strpos($m[0], ' checked') === false, 'OPT-09 renderer dependency matrix');
 }
 $conf->modules['societe'] = 1; $user->denied = array();
 echo $passed." assertions passed (V22 calendar APIs, synthetic business data; no database connection).\n";

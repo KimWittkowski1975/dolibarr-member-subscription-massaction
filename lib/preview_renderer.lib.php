@@ -16,6 +16,13 @@ function msmDateField($name, $value, $label)
 	return '<input type="date" min="1970-01-01" max="9998-12-31" style="min-width:10rem" name="'.dol_escape_htmltag($name).'" aria-label="'.dol_escape_htmltag($label).'" value="'.dol_escape_htmltag($value).'">';
 }
 
+/** Keep preview, confirmation, in-progress and completed result headings distinct. */
+function msmPageTitleKey($phase)
+{
+	$keys = array('preview' => 'MSMTitle', 'confirm' => 'MSMConfirmTitle', 'processing' => 'MSMProcessingTitle', 'done' => 'MSMResultsTitle');
+	return $keys[$phase] ?? 'MSMProcessingTitle';
+}
+
 /** Pure rendering; dates/amounts/statuses come from the server-side services. */
 function msmRenderPreview(array $state, $key)
 {
@@ -27,9 +34,9 @@ function msmRenderPreview(array $state, $key)
 	$html .= '<fieldset><legend>'.msmText('MSMOptions').'</legend>';
 	$html .= msmDateField('common', $state['common'], $langs->transnoentities('SubscriptionBulkCommonStart'));
 	$html .= '<button class="button" name="action" value="common">'.msmText('SubscriptionBulkApplyCommon').'</button><br>';
-	foreach (array('invoice' => 'MSMPlanInvoice', 'sendmail' => 'MSMPlanMail', 'autocreate' => 'MSMPlanThirdParty') as $option => $label) {
-		$disabled = $option === 'autocreate' && !msmCanPlanThirdParty($state['options']['invoice'], $user);
-		$html .= '<label><input type="checkbox" name="'.$option.'" value="1"'.($state['options'][$option] && !$disabled ? ' checked' : '').($disabled ? ' disabled' : '').'> '.msmText($label).'</label><br>';
+	foreach (array('sendmail' => 'MSMPlanMail', 'invoice' => 'MSMPlanInvoice', 'autocreate' => 'MSMPlanThirdParty') as $option => $label) {
+		$disabled = $option !== 'sendmail';
+		$html .= '<label><input type="checkbox" name="'.$option.'" value="1"'.($state['options'][$option] && !$disabled ? ' checked' : '').($disabled ? ' disabled' : '').'> '.msmText($label).($disabled ? ' ('.msmText('MSMLaterPhase').')' : '').'</label><br>';
 	}
 	$html .= '<label>'.msmText('SubscriptionBulkDescriptionLabel').' <input class="minwidth300" type="text" name="description" maxlength="1024" value="'.dol_escape_htmltag($state['options']['description']).'"></label>';
 	$html .= '<p>'.msmText('SubscriptionBulkDescriptionHelp').'</p></fieldset>';
@@ -57,6 +64,7 @@ function msmRenderPreview(array $state, $key)
 		}
 		$html .= '<td>'.dol_escape_htmltag($row['thirdparty']).'</td><td>'.msmText($row['status'] === 'error' ? 'SubscriptionBulkError' : ($row['status'] === 'warning' ? 'SubscriptionBulkWarning' : 'SubscriptionBulkReady')).'</td><td>';
 		foreach ($row['notices'] as $notice) { $html .= '<div>'.msmText($notice).'</div>'; }
+		if ($row['quantity'] == 1 && $row['unit'] === 'd' && $row['end'] > 0) { $html .= '<div>'.msmText('MSMOneDay', dol_print_date($row['end'], 'day')).'</div>'; }
 		$html .= '<div>'.dol_escape_htmltag($row['description']).'</div></td></tr>';
 		if ($row['warnings']) { $warnings++; }
 		if (!$row['errors'] && $row['amount'] !== null) { $sum += $row['amount']; }
@@ -64,6 +72,7 @@ function msmRenderPreview(array $state, $key)
 	$counts = msmPreviewCounts($state['rows']);
 	$html .= '</tbody></table></div><p role="status">'.msmText('MSMCounts', (string) $counts['selected'], (string) $counts['ready'], (string) $counts['skipped'], (string) $warnings, price($sum).' '.$conf->currency).'</p>';
 	$html .= '<button class="button" name="action" value="refresh">'.msmText('SubscriptionBulkRefresh').'</button> ';
-	$html .= '<button class="button" name="action" value="cancel" formnovalidate>'.msmText('MSMCancel').'</button></form>';
+	$html .= '<button class="button" name="action" value="confirm">'.msmText('MSMReviewBooking').'</button> ';
+	$html .= '</form>';
 	return $html.'<p><a href="'.dol_escape_htmltag(msmListUrl()).'">'.msmText('MSMBack').'</a></p>';
 }

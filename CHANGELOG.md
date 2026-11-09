@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add explicit, single-use booking confirmation and persistent per-member results.
+- Book through the V22 member API with owned transactions, member locks and R16 checks.
+- Send optional confirmation mail only after commit, preserving subscription hooks and templates.
+- Disable invoice/third-party options and add synthetic transaction, replay and mail regressions.
+
+- Match V22 single-subscription defaults for zero membership-duration quantities.
+
 - Keep planned third-party creation dependent on invoice mode, including no-JavaScript forms.
 - Map preview requirements to concrete tests and retain sanitized available browser evidence.
 - Establish risk-based validation and compact reporting for subsequent phases.

@@ -104,7 +104,7 @@ class MsmPeriodService
 		return dol_mktime(0, 0, 0, (int) dol_print_date($date, '%m'), (int) dol_print_date($date, '%d'), (int) dol_print_date($date, '%Y'));
 	}
 
-	/** Parse the raw V22 duration; an omitted quantity means one, never zero. */
+	/** Parse the raw V22 duration; an omitted or zero quantity means one. */
 	public static function duration($type)
 	{
 		$raw = $type->duration ?? null;
@@ -112,9 +112,10 @@ class MsmPeriodService
 			// Preserve the reference's default for an entirely unconfigured type.
 			return array(1, 'y');
 		}
-		if (!is_string($raw) || !preg_match('/^([1-9][0-9]*)?([dwmy])$/D', $raw, $parts)) {
+		if (!is_string($raw) || !preg_match('/^(0|[1-9][0-9]*)?([dwmy])$/D', $raw, $parts)) {
 			throw new RuntimeException('SubscriptionBulkInvalidDate');
 		}
-		return array($parts[1] === '' ? 1 : (int) $parts[1], $parts[2]);
+		// V22 adherents/subscription.php defaults an empty duration_value to one.
+		return array($parts[1] === '' || $parts[1] === '0' ? 1 : (int) $parts[1], $parts[2]);
 	}
 }
