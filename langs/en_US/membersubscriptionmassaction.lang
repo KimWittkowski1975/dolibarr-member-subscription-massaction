@@ -85,3 +85,6 @@ MSMMail_missing=Mail warning: no valid member email.
 MSMMail_disabled=Mail warning: sending globally disabled.
 MSMMail_denied=Mail warning: permission no longer available.
 MSMMail_unknown=Mail warning: outcome uncertain; no automatic resend.
+MSMResultsTitle=Bulk member subscriptions - Booking results
+MSMConfirmTitle=Bulk member subscriptions - Booking confirmation
+MSMProcessingTitle=Bulk member subscriptions - Processing or interrupted

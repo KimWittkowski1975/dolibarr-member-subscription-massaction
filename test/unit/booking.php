@@ -221,4 +221,17 @@ $conf->file = (object) array('dol_document_root' => array('main' => DOL_DOCUMENT
 $ui['phase'] = 'done'; $ui['results'] = array(1 => array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'failed'));
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '<script>') === false && strpos($html, 'MSMBooked') !== false && strpos($html, 'MSMMail_failed') !== false && strpos($html, 'value="book"') === false, 'result preserves booking success beside mail warning without replay button');
+// Narrow UI follow-up: state-specific title, no redundant cancel button, retained content.
+verify(msmPageTitleKey('preview') === 'MSMTitle', 'UI preview title unchanged');
+verify(msmPageTitleKey('confirm') === 'MSMConfirmTitle', 'UI separate confirmation title');
+verify(msmPageTitleKey('done') === 'MSMResultsTitle', 'UI booking results title');
+verify(msmPageTitleKey('processing') === 'MSMProcessingTitle', 'UI interrupted state is not completed results');
+$de = file_get_contents(__DIR__.'/../../langs/de_DE/membersubscriptionmassaction.lang');
+verify(strpos($de, "MSMResultsTitle=Mitgliedsbeiträge gesammelt - Buchungsergebnisse\n") !== false, 'UI exact German result title');
+$ui['phase'] = 'preview'; $ui['rows'][1]['member'] = 'Synthetic Synthetic';
+$html = msmRenderPreview($ui, str_repeat('a', 32));
+verify(strpos($html, 'value="cancel"') === false && strpos($html, msmListUrl()) !== false, 'UI cancel removed and back link retained');
+verify(strpos($html, 'Synthetic Synthetic #1') !== false, 'UI repeated name parts preserved');
+$ui['phase'] = 'done'; $html = msmRenderBooking($ui, str_repeat('a', 32));
+verify(strpos($html, '/adherents/subscription.php?rowid=1') !== false && strpos($html, ' #9</a>') !== false, 'UI member subscription link and contribution ID retained');
 echo ($passed - $baseline)." booking/mail assertions passed (synthetic transactions and transports only).\n";

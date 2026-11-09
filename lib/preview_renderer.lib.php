@@ -16,6 +16,13 @@ function msmDateField($name, $value, $label)
 	return '<input type="date" min="1970-01-01" max="9998-12-31" style="min-width:10rem" name="'.dol_escape_htmltag($name).'" aria-label="'.dol_escape_htmltag($label).'" value="'.dol_escape_htmltag($value).'">';
 }
 
+/** Keep preview, confirmation, in-progress and completed result headings distinct. */
+function msmPageTitleKey($phase)
+{
+	$keys = array('preview' => 'MSMTitle', 'confirm' => 'MSMConfirmTitle', 'processing' => 'MSMProcessingTitle', 'done' => 'MSMResultsTitle');
+	return $keys[$phase] ?? 'MSMProcessingTitle';
+}
+
 /** Pure rendering; dates/amounts/statuses come from the server-side services. */
 function msmRenderPreview(array $state, $key)
 {
@@ -66,6 +73,6 @@ function msmRenderPreview(array $state, $key)
 	$html .= '</tbody></table></div><p role="status">'.msmText('MSMCounts', (string) $counts['selected'], (string) $counts['ready'], (string) $counts['skipped'], (string) $warnings, price($sum).' '.$conf->currency).'</p>';
 	$html .= '<button class="button" name="action" value="refresh">'.msmText('SubscriptionBulkRefresh').'</button> ';
 	$html .= '<button class="button" name="action" value="confirm">'.msmText('MSMReviewBooking').'</button> ';
-	$html .= '<button class="button" name="action" value="cancel" formnovalidate>'.msmText('MSMCancel').'</button></form>';
+	$html .= '</form>';
 	return $html.'<p><a href="'.dol_escape_htmltag(msmListUrl()).'">'.msmText('MSMBack').'</a></p>';
 }

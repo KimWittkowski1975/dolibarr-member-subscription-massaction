@@ -85,3 +85,6 @@ MSMMail_missing=E-Mail-Warnung: keine gültige Mitgliedsadresse.
 MSMMail_disabled=E-Mail-Warnung: Versand global deaktiviert.
 MSMMail_denied=E-Mail-Warnung: Berechtigung nicht mehr vorhanden.
 MSMMail_unknown=E-Mail-Warnung: Versandstatus ungeklärt; kein automatischer Neuversand.
+MSMResultsTitle=Mitgliedsbeiträge gesammelt - Buchungsergebnisse
+MSMConfirmTitle=Mitgliedsbeiträge gesammelt - Buchungsbestätigung
+MSMProcessingTitle=Mitgliedsbeiträge gesammelt - Verarbeitung läuft oder ist unterbrochen
