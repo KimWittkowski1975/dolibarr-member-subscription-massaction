@@ -323,3 +323,42 @@ The project owner completed the manual browser acceptance of the Phase 3B user i
 **Conclusion:** Manual Phase 3B browser acceptance is complete. No additional UI changes or repeated bulk booking are required on the basis of these results.
 
 The existing authenticated HTTP follow-up retains its classification **HTTP REPLAY VALIDATED WITH LIMITATIONS**. The documented aggregate user-table hash limitation, session-loss and crash limitations, and remaining independent final code review are unaffected.
+
+
+## 2026-11-10 — Final independent review and owner acceptance of residual risks
+
+As reported by the project owner, the independent final review of PR #2 on 2026-11-09, performed against commit `28abb3ed24771fd26d6018d8247a04342abeccfd`, concluded:
+
+**APPROVED WITH CONDITIONS**
+
+The review identified no proven CRITICAL or HIGH implementation defects.
+
+The remaining findings were:
+
+- F-01 (MEDIUM): inconsistent historical validation status across project documentation;
+- F-02 (LOW): clarification of the standard-email attachment exclusion comment.
+
+These findings have been addressed by the subsequent targeted correction commit, subject to verification of its final diff and CI results.
+
+**Project owner decision**
+
+The project owner explicitly accepts the documented residual risks R05, R06, R07, R08 and R09 within the reviewed Phase 3B scope and the validated Dolibarr 22.0.5 environment.
+
+R16 was assessed by the independent reviewer as sufficiently safeguarded within the reviewed scope.
+
+This acceptance includes the documented limitations concerning:
+
+- concurrency with non-cooperating external writers;
+- uncertain transaction outcomes following actual server or connection failures;
+- missing durable operation journaling and general exactly-once guarantees;
+- external hook side effects and mail delivery limitations;
+- remaining evidence and integration-test boundaries.
+
+This decision does not remove the underlying technical limitations.
+
+It does not constitute unrestricted production approval, compatibility approval for additional Dolibarr versions, or authorization for future functionality.
+
+This dated decision supersedes earlier statements that the independent final review
+is outstanding; those earlier test records remain historical evidence.
+
+The final merge decision remains with the project owner.

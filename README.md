@@ -1,8 +1,16 @@
 # Member Subscription Massaction for Dolibarr
 
-**Unreleased Phase 3B development: subscription booking and optional confirmation
-email are implemented, but real write/SMTP integration is not yet approved or tested.
-Do not use in production.**
+**Unreleased Phase 3B: subscription booking and optional confirmation email are
+implemented and validated within the documented Dolibarr 22.0.5 scope. Do not use
+in production.**
+
+Real booking/database integration and authenticated HTTP replay tests have been
+performed; manual browser acceptance passed 9/9. The owner confirmed receipt of the
+ten original emails. The independent final review concluded **APPROVED WITH CONDITIONS**;
+its documentation and mail-comment findings are addressed by this focused follow-up,
+subject to final diff/CI verification. This is not unrestricted production approval.
+See [Phase 3B validation](docs/phase3b-validation.md) for evidence, limitations and
+the owner's scoped residual-risk acceptance.
 
 The module adds an authenticated member-list preview, an explicit confirmation and
 per-member booking results. It never creates invoices, third parties, PDFs, payments
@@ -47,8 +55,9 @@ availability does not imply a released, installable production module.
    rule. Select confirmation email independently, then review the separate confirmation.
    Confirm each displayed overlap explicitly and use **Book confirmed subscriptions now**.
    Missing overlap consent skips that row. Invoice and third-party options remain disabled.
-8. Cancel invalidates only this run and returns to the list; the Back link leaves
-   it available until expiry. Deactivation removes the action from the list.
+8. The preview provides a Back link to the member list without invalidating the
+   preview. It remains available until normal expiry. No separate Cancel button is
+   rendered; an internal cancel route is retained. Deactivation removes the list action.
 
 V22 clears `massaction` without `confirmmassaction`. The module uses that existing
 list contract and `doMassActions` before response output; it does not introduce a
@@ -90,9 +99,11 @@ Run `php test/unit/run.php` and
 `DOLIBARR_TEST_ROOT=/path/to/dolibarr php test/unit/booking.php` and
 `php test/unit/maildelivery.php` (no dependencies
 or database bootstrap). The booking runner includes the existing preview runner and requires a V22.0.5 checkout.
-See [Phase 3A validation](docs/phase3a-validation.md) for evidence and limitations.
+See [Phase 3B validation](docs/phase3b-validation.md) for current evidence and limitations;
+[Phase 3A validation](docs/phase3a-validation.md) preserves historical evidence.
 Lint PHP files and run `git diff --check`; CI also checks the initial commit.
-Synthetic tests do not prove actual browser integration. Follow
+Synthetic tests alone do not prove browser integration; the separate owner-performed
+UI-01–UI-09 acceptance is recorded in Phase 3B validation. For future checks, follow
 [test/integration/smoke.md](test/integration/smoke.md) on an approved installation.
 The complete phase-1 requirements and open risks are retained in
 [docs/porting-plan.md](docs/porting-plan.md) and [docs/requirements.csv](docs/requirements.csv).

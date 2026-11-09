@@ -49,7 +49,8 @@ class MsmSubscriptionMail
 		$message = make_substitutions($message, $substitutions, $outputlangs);
 		if (trim($message) === '') { return 'failed'; }
 		// Adherent::sendEmail uses ADHERENT_MAIL_FROM, standard substitutions and format detection.
-		// Empty attachment lists deliberately exclude invoices, including hook-injected invoices.
+		// Empty attachment lists exclude invoices from the module's
+		// standard email transport. Takeover hooks control their own attachments.
 		$result = $member->sendEmail($message, $subject, array(), array(), array(), '', '', 0, $ishtml, '', "X-Dolibarr-Info: member subscription module\r\n");
 		return $result > 0 ? 'transport' : 'failed';
 	}
