@@ -186,6 +186,7 @@ class PreviewMember
 class PreviewFixtureService extends MsmPreviewService
 {
 	public $type; public $deny = false;
+	protected function invoiceProfile() { return new class { public function resolve(...$args) { return array('synthetic' => true); } }; }
 	protected function subscriptionTypeForBatch($user)
 	{
 		if ($this->deny) { throw new RuntimeException('NotEnoughPermissions'); }

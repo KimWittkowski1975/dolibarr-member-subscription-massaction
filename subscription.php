@@ -55,12 +55,8 @@ try {
 	}
 	$key = $method === 'POST' ? ($_POST['preview'] ?? null) : ($_GET['preview'] ?? null);
 	$state = msmReadPreview($_SESSION, $key, (int) $user->id, (int) $conf->entity, dol_now());
-	// Migrate old previews without carrying invoice consent into a booking.
-	if (($state['format'] ?? 0) !== 3) {
-		$state['format'] = 3; $state['phase'] = 'preview'; $state['revision']++;
-		$state['options']['invoice'] = false; $state['options']['autocreate'] = false;
-		$state['rows'] = array(); $_SESSION['msm_previews'][$key] = $state;
-	}
+	$state = msmUpgradePreview($state);
+	$_SESSION['msm_previews'][$key] = $state;
 } catch (Exception $e) {
 	accessforbidden($langs->trans('MSMInvalidRun'));
 }

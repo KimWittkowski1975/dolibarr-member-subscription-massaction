@@ -114,7 +114,8 @@ function msmReadDate($value)
 /** Independent one-hour preview store; the original 15-minute selection is unchanged. */
 function msmCreatePreview(array &$session, array $selection, $now)
 {
-	global $langs;
+	global $langs, $user;
+	require_once __DIR__.'/../class/preview.class.php';
 	$runs = $session['msm_previews'] ?? array();
 	foreach ($runs as $key => $run) {
 		if ($run['expires'] <= $now && ($run['phase'] ?? '') !== 'processing') { unset($runs[$key]); }
@@ -128,8 +129,8 @@ function msmCreatePreview(array &$session, array $selection, $now)
 	}
 	$key = bin2hex(random_bytes(16));
 	$runs[$key] = array('owner' => $selection['owner'], 'entity' => $selection['entity'], 'expires' => $now + 3600,
-		'format' => 3, 'phase' => 'preview', 'ids' => $selection['ids'], 'revision' => 0, 'rows' => array(), 'input' => array(), 'common' => '',
-		'options' => array('invoice' => false, 'sendmail' => (bool) getDolGlobalInt('ADHERENT_DEFAULT_SENDINFOBYMAIL'), 'autocreate' => false,
+		'format' => 4, 'phase' => 'preview', 'ids' => $selection['ids'], 'revision' => 0, 'rows' => array(), 'input' => array(), 'common' => '',
+		'options' => array('invoice' => msmInvoiceDefault($user), 'sendmail' => (bool) getDolGlobalInt('ADHERENT_DEFAULT_SENDINFOBYMAIL'), 'autocreate' => false,
 			'description' => $langs->transnoentities('Subscription').', {Member type}, {Start date} - {End date}'));
 	$session['msm_previews'] = $runs;
 	return $key;
@@ -214,5 +215,23 @@ function msmEvaluatePreview($db, $user, array $state)
 		$row['manualend'] = $input['manualend'];
 		$state['rows'][$id] = $row;
 	}
+	return $state;
+}
+
+/** New runs only: never reapply a default to an explicit user choice. */
+function msmInvoiceDefault($user)
+{
+	return getDolGlobalString('ADHERENT_BANK_USE') === 'invoiceonly'
+		&& MsmPreviewService::canCreateSubscriptionWithOptions($user, true, (bool) getDolGlobalInt('ADHERENT_DEFAULT_SENDINFOBYMAIL'));
+}
+
+/** Old confirmed previews need fresh consent; consumed runs must never reopen. */
+function msmUpgradePreview(array $state)
+{
+	if (($state['format'] ?? 0) === 4) { return $state; }
+	if (in_array($state['phase'] ?? '', array('processing', 'done'), true)) { return $state; }
+	$state['format'] = 4; $state['phase'] = 'preview'; $state['revision']++;
+	$state['options']['invoice'] = false; $state['options']['autocreate'] = false;
+	$state['rows'] = array();
 	return $state;
 }

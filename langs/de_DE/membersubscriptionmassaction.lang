@@ -88,3 +88,5 @@ MSMMail_unknown=E-Mail-Warnung: Versandstatus ungeklärt; kein automatischer Neu
 MSMResultsTitle=Mitgliedsbeiträge gesammelt - Buchungsergebnisse
 MSMConfirmTitle=Mitgliedsbeiträge gesammelt - Buchungsbestätigung
 MSMProcessingTitle=Mitgliedsbeiträge gesammelt - Verarbeitung läuft oder ist unterbrochen
+
+MSMInvoiceProfileUnsupported=Das Rechnungsprofil wird nicht unterstützt oder ist unvollständig. Währung, Steuern, Zahlungsbedingungen, Verpackungseinheiten und Rechnungsmodelle prüfen.
