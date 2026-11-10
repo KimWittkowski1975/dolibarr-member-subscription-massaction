@@ -8,7 +8,10 @@
 - Use `docs/test-strategy.md` for T1–T4 validation and evidence requirements.
 - Use `docs/test-coverage.md` only as the legend for existing test references and evidence limits.
 - Treat `docs/phase3b-validation.md` as the validated Phase 3B baseline.
-- For invoicing, follow `docs/phase4-invoice-architecture.md` and `docs/phase4-invoice-implementation-plan.md`.
+- For invoice work, use `docs/phase4-invoice-architecture.md` and
+  `docs/phase4-invoice-implementation-plan.md` for binding decisions and gates.
+  Establish current implementation and evidence status from the active branch and
+  applicable validation documents.
 - Do not create a parallel architecture, requirement matrix, test strategy, or evidence history.
 
 ## Architecture and compatibility
@@ -29,10 +32,14 @@
 - For functional changes, run focused T1 baseline checks and T2 change-specific regressions.
 - `test/unit/booking.php` already includes `test/unit/preview.php`; avoid redundant runs without a concrete reason.
 - Reuse existing harnesses before adding a new test tool or fixture layer.
-- Run T3 integration and T4 extended tests only when the risk requires them and the environment and writes are explicitly authorized.
+- Run risk- or milestone-required T3/T4 tests within the approved scope. Real-environment
+  tests require an approved installation. Obtain separate authorization for business
+  writes, environment changes, live fault injection and SMTP delivery; isolated
+  synthetic fault tests remain allowed.
 - Never present synthetic adapters, stubs, source inspection, or assertion counts as real Dolibarr integration evidence.
 - Mark every required but unperformed check as `NOT EXECUTED` and state the missing authorization or environment.
-- Keep successful output compact; retain focused, sanitized evidence for relevant failures.
+- Keep chat output compact; retain sanitized, reproducible evidence for material tests,
+  including successful integration cases and failures.
 - For changed PHP, include appropriate lint, language parity, targeted runners, and `git diff --check`.
 
 ## Safety and Git boundaries
