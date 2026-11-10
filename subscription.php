@@ -76,6 +76,7 @@ if ($method === 'POST') {
 			if (!session_write_close()) { throw new RuntimeException('MSMSessionFailure'); }
 			require_once __DIR__.'/class/booking.class.php';
 			require_once __DIR__.'/class/mail.class.php';
+			require_once __DIR__.'/class/invoicepdf.class.php';
 			$save = static function ($updated) use ($key) {
 				if (!session_start()) { throw new RuntimeException('MSMSessionFailure'); }
 				$current = $_SESSION['msm_previews'][$key] ?? null;
@@ -86,7 +87,7 @@ if ($method === 'POST') {
 				if (!session_write_close()) { throw new RuntimeException('MSMSessionFailure'); }
 			};
 			$save($state); // Read back consumed state before the first database side effect.
-			$state = msmProcessBooking($state, new MsmBookingService($db), new MsmSubscriptionMail($db), $user, $save);
+			$state = msmProcessBooking($state, new MsmBookingService($db), new MsmSubscriptionMail($db), $user, $save, new MsmInvoicePdfService($db));
 		} elseif ($action === 'edit') {
 			msmBookingPost($state, $_POST, 'edit');
 			if ($state['phase'] !== 'confirm') { throw new InvalidArgumentException('MSMInvalidForm'); }

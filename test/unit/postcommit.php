@@ -1,0 +1,65 @@
+<?php
+/* Copyright (C) 2026 iLLixM <iLLixM@proton.me>
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+require __DIR__.'/booking.php';
+$postBaseline = $passed;
+
+class PostCommitBookingDouble
+{
+	public $calls = 0; public $invoice = true;
+	public function book($id, $row, $options, $user, $overlap)
+	{
+		$this->calls++;
+		$result = array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12,
+			'mail' => 'not_selected', 'stop' => false, '_member' => (object) array('id' => $id));
+		if ($this->invoice) {
+			$result['invoice'] = array('id' => 42, 'ref' => 'INV-SYNTHETIC', 'entity' => 1, 'customer_id' => 4,
+				'customer_created' => false, 'subscription_id' => 9, 'member_id' => $id, 'pdf_model' => 'crabe', 'pdf' => 'pending');
+		}
+		return $result;
+	}
+}
+class PostCommitPdfDouble
+{
+	public $calls = 0; public $status = 'verified'; public $saves;
+	public function generate($identity, $user)
+	{
+		$this->calls++;
+		$last = end($this->saves);
+		verify($last['results'][1]['invoice']['pdf']['status'] === 'unknown', 'unknown PDF checkpoint precedes generation');
+		return array('status' => $this->status, 'message' => $this->status === 'verified' ? 'MSMPdfVerified' : 'MSMPdfGenerationFailed');
+	}
+}
+class PostCommitMailDouble
+{
+	public $calls = 0; public $saves;
+	public function send($member, $row, $user, $selected, $invoice = null)
+	{
+		$this->calls++;
+		$last = end($this->saves);
+		if ($invoice !== null) { verify($last['results'][1]['invoice']['pdf'] === $invoice['pdf'], 'PDF result checkpoint precedes mail'); }
+		if (!$selected) { return 'not_selected'; }
+		return $invoice !== null && $invoice['pdf']['status'] !== 'verified' ? 'attachment_missing' : 'transport';
+	}
+}
+function postState($invoice, $mail)
+{
+	return array('phase' => 'processing', 'revision' => 2, 'ids' => array(1), 'overlap' => array(),
+		'options' => array('invoice' => $invoice, 'autocreate' => false, 'sendmail' => $mail, 'description' => 'Synthetic'),
+		'rows' => array(1 => array('errors' => array(), 'overlaps' => array())),
+		'results' => array(1 => array('status' => 'unknown')));
+}
+foreach (array(array(true, true, 'verified', 'transport'), array(true, true, 'failed', 'attachment_missing'), array(true, false, 'verified', 'not_selected')) as $case) {
+	$saves = array(); $service = new PostCommitBookingDouble(); $pdf = new PostCommitPdfDouble(); $mail = new PostCommitMailDouble();
+	$pdf->status = $case[2]; $pdf->saves =& $saves; $mail->saves =& $saves;
+	$done = msmProcessBooking(postState($case[0], $case[1]), $service, $mail, new PreviewUser(), static function ($state) use (&$saves) { $saves[] = $state; }, $pdf);
+	verify($service->calls === 1 && $pdf->calls === 1 && $mail->calls === 1, 'one post-commit effect sequence');
+	verify($done['results'][1]['status'] === 'success' && $done['results'][1]['invoice']['pdf']['status'] === $case[2]
+		&& $done['results'][1]['mail'] === $case[3], 'business success retained across post-commit outcome');
+}
+$saves = array(); $service = new PostCommitBookingDouble(); $service->invoice = false;
+$pdf = new PostCommitPdfDouble(); $pdf->saves =& $saves; $mail = new PostCommitMailDouble(); $mail->saves =& $saves;
+$done = msmProcessBooking(postState(false, true), $service, $mail, new PreviewUser(), static function ($state) use (&$saves) { $saves[] = $state; }, $pdf);
+verify($pdf->calls === 0 && $mail->calls === 1 && $done['results'][1]['mail'] === 'transport', 'subscription-only mail remains independent');
+echo ($passed - $postBaseline)." post-commit assertions passed (synthetic checkpoints; no files, database or SMTP).\n";

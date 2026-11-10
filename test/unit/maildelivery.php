@@ -29,6 +29,28 @@ class Adherent
 }
 class DeliveryHooks { public function executeHooks($name, $params, &$object, &$action) { return 0; } }
 class DeliveryAdapter extends MsmSubscriptionMail { protected function permitted($user) { return true; } protected function hooks() { return new DeliveryHooks(); } }
+class InvoiceAttachmentDouble
+{
+	public $calls = 0; public $fail = false;
+	public function attachment($identity, $descriptor, $user)
+	{
+		$this->calls++;
+		if ($this->fail) { throw new RuntimeException('changed'); }
+		return array('_path' => '/isolated/INV-SYNTHETIC.pdf', 'name' => 'INV-SYNTHETIC.pdf');
+	}
+}
+class InvoiceDeliveryHooks
+{
+	public $code = 0;
+	public function executeHooks($name, $params, &$object, &$action) { return $this->code; }
+}
+class InvoiceDeliveryAdapter extends DeliveryAdapter
+{
+	public $pdfAdapter; public $hookAdapter;
+	protected function invoicePermitted($user) { return true; }
+	protected function pdf() { return $this->pdfAdapter; }
+	protected function hooks() { return $this->hookAdapter; }
+}
 $conf = new stdClass(); $mysoc = (object) array('default_lang' => 'en_US'); $langs = (object) array('original' => true); $original = $langs; $hookmanager = new stdClass();
 $member = new Adherent(); $member->invoice = (object) array('ref' => 'DO-NOT-ATTACH');
 $row = array('description' => '<unsafe>', 'start' => 1791590400, 'end' => 1823040000, 'amount' => 99);
@@ -42,4 +64,16 @@ checkMail($GLOBALS['template_request'][0] === 'member' && $GLOBALS['template_req
 $plain_template = true;
 checkMail($mail->send($member, $row, new stdClass(), true) === 'transport' && $last_mail[8] === 0 && strpos($last_mail[0], '<unsafe>') !== false, 'plain description preserved without changing template format');
 $member->returnCode = -1; checkMail($mail->send($member, $row, new stdClass(), true) === 'failed', 'adapter propagates transport failure');
+$member->returnCode = 1; $invoiceMail = new InvoiceDeliveryAdapter(new stdClass());
+$invoiceMail->pdfAdapter = new InvoiceAttachmentDouble(); $invoiceMail->hookAdapter = new InvoiceDeliveryHooks();
+$invoice = array('id' => 42, 'pdf' => array('status' => 'verified', 'sha256' => 'synthetic'));
+checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'transport', 'invoice mail standard transport');
+checkMail($last_mail[2] === array('/isolated/INV-SYNTHETIC.pdf') && $last_mail[3] === array('application/pdf') && $last_mail[4] === array('INV-SYNTHETIC.pdf'), 'verified invoice PDF attached');
+$invoice['pdf']['status'] = 'failed';
+checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'attachment_missing', 'failed PDF blocks standard transport');
+$invoice['pdf']['status'] = 'verified'; $invoiceMail->pdfAdapter->fail = true;
+checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'attachment_missing', 'changed PDF blocks standard transport');
+$invoiceMail->hookAdapter->code = 1;
+checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'hook', 'positive hook remains distinct from standard invoice transport');
+checkMail($invoiceMail->pdfAdapter->calls === 2, 'takeover hook does not resolve standard attachment');
 echo $passed." mail adapter assertions passed (template/type/transport doubles; no SMTP).\n";

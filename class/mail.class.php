@@ -14,6 +14,14 @@ class MsmSubscriptionMail
 		$current->getrights('', 1);
 		return MsmPreviewService::canCreateSubscriptionWithOptions($current);
 	}
+	protected function invoicePermitted($user)
+	{
+		$current = new User($this->db);
+		if ($current->fetch($user->id) <= 0 || empty($current->statut)) { return false; }
+		$current->getrights('', 1);
+		return MsmPreviewService::canCreateSubscriptionWithOptions($current, true, true);
+	}
+	protected function pdf() { require_once __DIR__.'/invoicepdf.class.php'; return new MsmInvoicePdfService($this->db); }
 	protected function hooks()
 	{
 		require_once DOL_DOCUMENT_ROOT.'/core/class/hookmanager.class.php';
@@ -48,30 +56,41 @@ class MsmSubscriptionMail
 		$subject = make_substitutions($subject, $substitutions, $outputlangs);
 		$message = make_substitutions($message, $substitutions, $outputlangs);
 		if (trim($message) === '') { return 'failed'; }
-		// Adherent::sendEmail uses ADHERENT_MAIL_FROM, standard substitutions and format detection.
-		// Empty attachment lists exclude invoices from the module's
-		// standard email transport. Takeover hooks control their own attachments.
-		$result = $member->sendEmail($message, $subject, array(), array(), array(), '', '', 0, $ishtml, '', "X-Dolibarr-Info: member subscription module\r\n");
+		// Adherent::sendEmail keeps the Core sender, tracking and recipient semantics.
+		$attachment = $row['_attachment'] ?? null;
+		$paths = $attachment === null ? array() : array($attachment['_path']);
+		$mimes = $attachment === null ? array() : array('application/pdf');
+		$names = $attachment === null ? array() : array($attachment['name']);
+		$result = $member->sendEmail($message, $subject, $paths, $mimes, $names, '', '', 0, $ishtml, '', "X-Dolibarr-Info: member subscription module\r\n");
 		return $result > 0 ? 'transport' : 'failed';
 	}
-	public function send($member, array $row, $user, $selected)
+	public function send($member, array $row, $user, $selected, array $invoice = null)
 	{
 		global $hookmanager, $langs;
 		if (!$selected) { return 'not_selected'; }
-		try { if (!$this->permitted($user)) { return 'denied'; } } catch (Throwable $e) { return 'unknown'; }
+		try {
+			if (!$this->permitted($user) || ($invoice !== null && !$this->invoicePermitted($user))) { return 'denied'; }
+		} catch (Throwable $e) { return 'unknown'; }
 		if (getDolGlobalInt('MAIN_DISABLE_ALL_MAILS')) { return 'disabled'; }
 		if (!isValidEmail((string) $member->email)) { return 'missing'; }
 		$previous = $hookmanager; $previousLangs = $langs;
 		try {
 			$object = clone $member; $action = 'subscription';
 			$hookmanager = $this->hooks();
-			$parameters = array('datesubscription' => $row['start'], 'amount' => $row['amount'], 'ccountid' => 0, 'operation' => '', 'label' => $row['description'], 'num_chq' => '', 'emetteur_nom' => '', 'emetteur_banque' => '', 'datesubend' => $row['end']);
+			$parameters = array('datesubscription' => $row['start'], 'amount' => $row['amount'], 'ccountid' => 0, 'operation' => '', 'label' => $row['description'], 'num_chq' => '', 'emetteur_nom' => '', 'emetteur_banque' => '', 'datesubend' => $row['end'], 'invoice' => $invoice);
 			$result = $hookmanager->executeHooks('sendMail', $parameters, $object, $action);
 			if ($result < 0) { return 'failed'; }
 			if ($result > 0) { return 'hook'; }
 			// Respect a valid replacement, never silently change the confirmed recipient.
 			if (!($object instanceof Adherent) || (int) $object->id !== (int) $member->id || (int) $object->entity !== (int) $member->entity || $object->email !== $member->email || (int) $object->typeid !== (int) $member->typeid) { return 'failed'; }
 			if (getDolGlobalInt('MAIN_DISABLE_ALL_MAILS')) { return 'disabled'; }
+			$attachment = null;
+			if ($invoice !== null) {
+				if (($invoice['pdf']['status'] ?? '') !== 'verified') { return 'attachment_missing'; }
+				try { $attachment = $this->pdf()->attachment($invoice, $invoice['pdf'], $user); }
+				catch (Throwable $e) { return 'attachment_missing'; }
+			}
+			if ($attachment !== null) { $row['_attachment'] = $attachment; }
 			return $this->deliver($object, $row, $user);
 		} catch (Throwable $e) { return 'unknown'; }
 		finally { $hookmanager = $previous; $langs = $previousLangs; }

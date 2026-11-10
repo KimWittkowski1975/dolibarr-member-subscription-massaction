@@ -38,3 +38,5 @@ jobs:
           php test/unit/maildelivery.php
           php test/unit/invoiceprofile.php
           php test/unit/invoice.php
+          php test/unit/invoicepdf.php
+          php test/unit/postcommit.php

@@ -24,7 +24,7 @@ function msmConsumeConfirmation(array $state, array $post)
 	return $state;
 }
 /** Pure batch orchestration with a persistence checkpoint before/after each side effect. */
-function msmProcessBooking(array $state, $service, $mailer, $user, callable $save)
+function msmProcessBooking(array $state, $service, $mailer, $user, callable $save, $pdf = null)
 {
 	$stop = false;
 	foreach ($state['ids'] as $id) {
@@ -39,7 +39,16 @@ function msmProcessBooking(array $state, $service, $mailer, $user, callable $sav
 		$state['results'][$id] = $result;
 		$save($state); // A crash from here must never rebook or resend automatically.
 		if ($result['status'] === 'success') {
-			$state['results'][$id]['mail'] = $mailer->send($member, $row, $user, $state['options']['sendmail']);
+			if (!empty($state['options']['invoice'])) {
+				$state['results'][$id]['invoice']['pdf'] = array('status' => 'unknown', 'message' => 'MSMPdfInterrupted');
+				$save($state);
+				$state['results'][$id]['invoice']['pdf'] = $pdf !== null
+					? $pdf->generate($state['results'][$id]['invoice'], $user)
+					: array('status' => 'failed', 'message' => 'MSMPdfGenerationFailed');
+				$save($state);
+			}
+			$invoice = $state['results'][$id]['invoice'] ?? null;
+			$state['results'][$id]['mail'] = $mailer->send($member, $row, $user, $state['options']['sendmail'], $invoice);
 			$save($state);
 		}
 		$stop = $result['stop'];
