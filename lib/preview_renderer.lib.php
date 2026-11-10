@@ -34,10 +34,14 @@ function msmRenderPreview(array $state, $key)
 	$html .= '<fieldset><legend>'.msmText('MSMOptions').'</legend>';
 	$html .= msmDateField('common', $state['common'], $langs->transnoentities('SubscriptionBulkCommonStart'));
 	$html .= '<button class="button" name="action" value="common">'.msmText('SubscriptionBulkApplyCommon').'</button><br>';
+	$invoiceAvailable = MsmPreviewService::canCreateSubscriptionWithOptions($user, true, $state['options']['sendmail']);
 	foreach (array('sendmail' => 'MSMPlanMail', 'invoice' => 'MSMPlanInvoice', 'autocreate' => 'MSMPlanThirdParty') as $option => $label) {
-		$disabled = $option !== 'sendmail';
-		$html .= '<label><input type="checkbox" name="'.$option.'" value="1"'.($state['options'][$option] && !$disabled ? ' checked' : '').($disabled ? ' disabled' : '').'> '.msmText($label).($disabled ? ' ('.msmText('MSMLaterPhase').')' : '').'</label><br>';
+		$disabled = ($option === 'invoice' && !$invoiceAvailable)
+			|| ($option === 'autocreate' && (!$state['options']['invoice'] || !msmCanPlanThirdParty(true, $user)));
+		$html .= '<label><input type="checkbox" name="'.$option.'" value="1"'.($state['options'][$option] && !$disabled ? ' checked' : '').($disabled ? ' disabled' : '').'> '.msmText($label).'</label><br>';
 	}
+	if (!$invoiceAvailable) { $html .= '<div class="info">'.msmText('MSMInvoiceUnavailable').'</div>'; }
+	if ($state['options']['invoice'] && $state['options']['sendmail']) { $html .= '<div class="info">'.msmText('MSMInvoiceMailPdfRequired').'</div>'; }
 	$html .= '<label>'.msmText('SubscriptionBulkDescriptionLabel').' <input class="minwidth300" type="text" name="description" maxlength="1024" value="'.dol_escape_htmltag($state['options']['description']).'"></label>';
 	$html .= '<p>'.msmText('SubscriptionBulkDescriptionHelp').'</p></fieldset>';
 	$month = getDolGlobalInt('MEMBER_SUBSCRIPTION_SUGGEST_END_OF_MONTH');
@@ -64,6 +68,10 @@ function msmRenderPreview(array $state, $key)
 		}
 		$html .= '<td>'.dol_escape_htmltag($row['thirdparty']).'</td><td>'.msmText($row['status'] === 'error' ? 'SubscriptionBulkError' : ($row['status'] === 'warning' ? 'SubscriptionBulkWarning' : 'SubscriptionBulkReady')).'</td><td>';
 		foreach ($row['notices'] as $notice) { $html .= '<div>'.msmText($notice).'</div>'; }
+		if (!empty($row['invoice'])) {
+			$html .= '<div>'.msmText('MSMInvoicePlanDetails', price($row['amount']).' '.$conf->currency,
+				dol_print_date(msmReadDate($row['invoice']['date']), 'day'), price($row['invoice']['vat']).'%', $row['invoice']['pdf_model']).'</div>';
+		}
 		if ($row['quantity'] == 1 && $row['unit'] === 'd' && $row['end'] > 0) { $html .= '<div>'.msmText('MSMOneDay', dol_print_date($row['end'], 'day')).'</div>'; }
 		$html .= '<div>'.dol_escape_htmltag($row['description']).'</div></td></tr>';
 		if ($row['warnings']) { $warnings++; }

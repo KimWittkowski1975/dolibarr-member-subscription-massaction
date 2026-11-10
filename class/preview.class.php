@@ -167,7 +167,7 @@ class MsmPreviewService
 			}
 			$this->member->thirdparty = null;
 			if ($invoice) {
-				throw new RuntimeException('SubscriptionBulkThirdPartyMissing');
+				throw new RuntimeException('MSMThirdPartyInaccessible');
 			}
 		} elseif ($invoice) {
 			if (!$autocreate) {
@@ -248,7 +248,7 @@ class MsmPreviewService
 				$row['thirdparty'] = $this->member->thirdparty->name;
 			}
 		} catch (Throwable $e) {
-			$row['errors'][] = in_array($e->getMessage(), array('NotEnoughPermissions', 'SubscriptionBulkThirdPartyMissing'), true) ? $e->getMessage() : 'SubscriptionBulkDatabaseError';
+			$row['errors'][] = in_array($e->getMessage(), array('NotEnoughPermissions', 'SubscriptionBulkThirdPartyMissing', 'MSMThirdPartyInaccessible'), true) ? $e->getMessage() : 'SubscriptionBulkDatabaseError';
 		}
 		if (!self::canCreateSubscriptionWithOptions($user, $invoice, $sendmail)) {
 			$row['errors'][] = 'NotEnoughPermissions';

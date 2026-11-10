@@ -35,6 +35,8 @@ $member->thirdparty->multicurrency_code = 'EUR';
 $old = $profile->resolve($member, $user, false, false);
 $member->thirdparty->name = 'Changed';
 verify($old !== $profile->resolve($member, $user, false, false), 'customer changes invalidate profile');
+$configured = $profile->resolve($member, $user, false, false); $conf->global->ADHERENT_BANK_USE = 'bankdirect';
+verify($configured !== $profile->resolve($member, $user, false, false), 'invoice setting changes invalidate profile'); unset($conf->global->ADHERENT_BANK_USE);
 $profile->term = 0;
 fails(static function () use ($profile, $member, $user) { $profile->resolve($member, $user, false, false); }, 'MSMInvoiceProfileUnsupported'); $profile->term = 1;
 $profile->rate = '20*';

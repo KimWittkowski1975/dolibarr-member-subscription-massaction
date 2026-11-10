@@ -10,9 +10,8 @@ real test references and explicit coverage gaps. No parallel requirement list is
   identify `fails(...)` assertions. For eligibility, see the `Direct business
   eligibility contract` block: status, configured status list and subscription flag
   are separate cases even though they deliberately share one error key.
-- `preview:OPT-01` covers independent mail in Phase 3B; adjacent failures reject
-  forged invoice/third-party fields. `preview:OPT-09` exercises disabled controls.
-  Former Phase 3A OPT-02..08 references describe historical behavior only.
+- `preview:OPT-01/02/09` cover independent mail, explicit invoice/customer consent
+  and option dependencies. Adjacent failures reject malformed or forged fields.
 - `ST-*` refers to `test/integration/smoke.md`; historical evidence has its date and
   baseline in `test/integration/browser-smoke.md`.
 - `BR-*` refers to the historical 13 Chrome cases documented in
@@ -21,11 +20,10 @@ real test references and explicit coverage gaps. No parallel requirement list is
 - `OPT-HTTP-*` refers to the targeted, real no-JavaScript HTTP test in
   `test/integration/options-http.py` and its anonymized evidence file.
 
-A PASS applies only to the named, implemented portion. In particular, invoice amount
-preflight is not an invoice creation test, a fingerprint is not an atomic replay test,
-and synthetic entity cases are not real Multicompany integration. Stock/product access
-fixtures and some defaults remain explicitly identified gaps. Invoice/product paths remain disabled in Phase 3B; review these deferred
-paths before implementing invoice booking.
+A PASS applies only to the named, implemented portion. Invoice profile, transaction,
+PDF, post-commit and UI runners use synthetic adapters/files; they are not real invoice,
+filesystem, SMTP, browser or Multicompany integration. A fingerprint is not an atomic
+replay test, and synthetic entity cases are not real Multicompany evidence.
 
 Do not inflate assertion counts to disguise gaps. Revisit medium/high-risk missing
 coverage when the relevant path changes or becomes capable of writing business data.
@@ -33,7 +31,9 @@ coverage when the relevant path changes or becomes capable of writing business d
 Phase 3B additions: `booking:<label>` references test/unit/booking.php;
 `maildelivery:<label>` references test/unit/maildelivery.php. The booking runner
 includes the existing preview runner once. Former OPT scenarios allowing invoice
-planning are superseded by independent-mail and rejected-invoice form assertions.
+planning are retained as history; current invoice consent has explicit Phase 4 tests.
+Phase 4 references use `invoiceprofile:`, `invoice:`, `invoicepdf:`, `postcommit:` and
+`loading:` for the correspondingly named runners.
 Historical OPT-HTTP evidence is not evidence of the new booking controller.
 Current evidence is separated by provenance (see `docs/phase3b-validation.md`):
 

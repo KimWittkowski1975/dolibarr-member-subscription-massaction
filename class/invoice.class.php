@@ -18,7 +18,7 @@ class MsmInvoiceService
 	protected function customer() { require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php'; return new Societe($this->db); }
 	public function lock($id)
 	{
-		foreach (array('societe', 'socpeople', 'societe_commerciaux', 'facture', 'facturedet', 'element_element') as $table) {
+		foreach (array('societe', 'societe_extrafields', 'socpeople', 'socpeople_extrafields', 'societe_commerciaux', 'facture', 'facture_extrafields', 'facturedet', 'facturedet_extrafields', 'element_element') as $table) {
 			$row = $this->one("SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '".$this->db->escape($this->db->prefix().$table)."'");
 			if (!$row || strtoupper($row->engine) !== 'INNODB') { throw new RuntimeException('MSMTransactionUnsupported'); }
 		}
@@ -26,7 +26,11 @@ class MsmInvoiceService
 		if (!$member) { throw new RuntimeException('NotEnoughPermissions'); }
 		if ($member->fk_soc) { $this->one('SELECT rowid FROM '.$this->db->prefix().'societe WHERE rowid = '.((int) $member->fk_soc).' FOR UPDATE'); }
 		$product = getDolGlobalInt('ADHERENT_PRODUCT_ID_FOR_SUBSCRIPTIONS');
-		if ($product) { $this->one('SELECT rowid FROM '.$this->db->prefix().'product WHERE rowid = '.$product.' FOR UPDATE'); }
+		if ($product) {
+			$row = $this->one("SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '".$this->db->escape($this->db->prefix().'product')."'");
+			if (!$row || strtoupper($row->engine) !== 'INNODB') { throw new RuntimeException('MSMTransactionUnsupported'); }
+			$this->one('SELECT rowid FROM '.$this->db->prefix().'product WHERE rowid = '.$product.' FOR UPDATE');
+		}
 	}
 	/** Check after every nested API call, before any further business operation. */
 	protected function owned()
@@ -65,7 +69,7 @@ class MsmInvoiceService
 		$id = $invoice->create($actor); $diagnostic['invoice_id'] = max(0, (int) $id); $this->owned();
 		if ($id <= 0) { throw new RuntimeException('MSMInvoiceFailed'); }
 		$diagnostic['stage'] = 'invoice_line';
-		$line = $invoice->addline($row['description'], 0, 1, $plan['vat'], 0, 0, $plan['product'], 0, $row['start'], '', 0, 0, 0, 'TTC', $row['amount'], 1);
+		$line = $invoice->addline($row['description'], 0, $plan['quantity'], $plan['vat'], 0, 0, $plan['product'], 0, $row['start'], '', 0, 0, 0, $plan['price_base'], $row['amount'], $plan['type']);
 		$this->owned(); if ($line <= 0) { throw new RuntimeException('MSMInvoiceFailed'); }
 		$diagnostic['stage'] = 'invoice_validate';
 		$validated = $invoice->validate($actor); $this->owned();
@@ -81,14 +85,20 @@ class MsmInvoiceService
 	protected function verify($id, $customer, $subscription, array $row)
 	{
 		$p = $row['invoice'];
-		$invoice = $this->one('SELECT entity, fk_soc, type, fk_statut, paye, total_ttc, ref FROM '.$this->db->prefix().'facture WHERE rowid = '.((int) $id));
-		$line = $this->one('SELECT COUNT(*) AS n, SUM(qty) AS qty, SUM(total_ttc) AS total FROM '.$this->db->prefix().'facturedet WHERE fk_facture = '.((int) $id));
+		$invoice = $this->one('SELECT entity, fk_soc, type, fk_statut, paye, total_ttc, ref, datef, fk_cond_reglement, fk_mode_reglement, fk_account, multicurrency_code FROM '.$this->db->prefix().'facture WHERE rowid = '.((int) $id));
+		$line = $this->one('SELECT COUNT(*) AS n, SUM(qty) AS qty, SUM(total_ttc) AS total, MAX(description) AS description, MAX(fk_product) AS product, MAX(product_type) AS product_type, MAX(tva_tx) AS vat, MAX(date_start) AS date_start FROM '.$this->db->prefix().'facturedet WHERE fk_facture = '.((int) $id));
 		$link = $this->one("SELECT COUNT(*) AS n FROM ".$this->db->prefix()."element_element WHERE sourcetype = 'subscription' AND targettype = 'facture' AND fk_source = ".((int) $subscription).' AND fk_target = '.((int) $id));
 		$party = $this->one('SELECT client FROM '.$this->db->prefix().'societe WHERE rowid = '.((int) $customer));
 		if (!$invoice || (int) $invoice->entity !== $p['entity'] || (int) $invoice->fk_soc !== $customer || (int) $invoice->type !== 0
 			|| (int) $invoice->fk_statut !== 1 || (int) $invoice->paye !== 0 || !$invoice->ref || strpos($invoice->ref, 'PROV') !== false
 			|| abs((float) $invoice->total_ttc - $row['amount']) > 0.00000001
-			|| !$line || (int) $line->n !== 1 || (float) $line->qty !== 1.0 || abs((float) $line->total - $row['amount']) > 0.00000001
+			|| substr((string) $invoice->datef, 0, 10) !== $p['date'] || (int) $invoice->fk_cond_reglement !== $p['term']
+			|| (int) $invoice->fk_mode_reglement !== $p['payment_mode'] || (int) $invoice->fk_account !== $p['bank']
+			|| (string) $invoice->multicurrency_code !== $p['currency']
+			|| !$line || (int) $line->n !== 1 || (float) $line->qty !== (float) $p['quantity'] || abs((float) $line->total - $row['amount']) > 0.00000001
+			|| (string) $line->description !== $row['description'] || (int) $line->product !== (int) $p['product']
+			|| (int) $line->product_type !== (int) $p['type'] || abs((float) $line->vat - (float) $p['vat']) > 0.00000001
+			|| (string) $line->date_start !== $this->db->idate($row['start'])
 			|| !$link || (int) $link->n !== 1 || !$party || !in_array((int) $party->client, array(1, 3), true)) { throw new RuntimeException('MSMConsistencyError'); }
 	}
 }

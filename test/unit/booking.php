@@ -111,6 +111,9 @@ $state = array('phase' => 'confirm', 'revision' => 7, 'ids' => array(1), 'option
 $post = array('action' => 'book', 'revision' => '7');
 $consumed = msmConsumeConfirmation($state, $post); verify($consumed['phase'] === 'processing', 'consume before effects');
 fails(static function () use ($consumed, $post) { msmConsumeConfirmation($consumed, $post); }, 'MSMInvalidForm');
+$invoiceState = $state; $invoiceState['options']['invoice'] = true; $invoiceState['options']['autocreate'] = true;
+$invoiceConsumed = msmConsumeConfirmation($invoiceState, $post);
+verify($invoiceConsumed['phase'] === 'processing' && $invoiceConsumed['options']['invoice'] && $invoiceConsumed['options']['autocreate'], 'server-held invoice consent consumed');
 foreach (array('amount', 'invoice', 'autocreate', 'ids', 'email') as $field) { $bad = $post; $bad[$field] = '1'; fails(static function () use ($state, $bad) { msmConsumeConfirmation($state, $bad); }, 'MSMInvalidForm'); }
 $bad = $post; $bad['overlap'] = array(999 => '1'); fails(static function () use ($state, $bad) { msmConsumeConfirmation($state, $bad); }, 'MSMInvalidForm');
 // Mail hooks use the production dispatcher, but never a transport or real hook loader.
@@ -215,12 +218,22 @@ $display = array_merge($row, array('member' => '<script>alert(1)</script>', 'typ
 $ui = array('phase' => 'confirm', 'revision' => 1, 'ids' => array(1), 'options' => $options, 'rows' => array(1 => $display), 'common' => '');
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '<script>') === false && strpos($html, 'value="book"') !== false && strpos($html, 'MSMOneDay') !== false, 'confirmation escaping booking control and one-day notice');
+verify(strpos($html, 'id="msm-confirm-form"') !== false && strpos($html, 'id="msm-final-submit"') !== false && strpos($html, 'id="msm-submit-status"') !== false, 'final-submit loader hooks rendered');
 $html = msmRenderPreview($ui, str_repeat('a', 32));
 verify(strpos($html, 'name="sendmail"') < strpos($html, 'name="invoice"') && strpos($html, 'name="invoice"') < strpos($html, 'name="autocreate"'), 'required option order');
 $conf->file = (object) array('dol_document_root' => array('main' => DOL_DOCUMENT_ROOT));
 $ui['phase'] = 'done'; $ui['results'] = array(1 => array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'failed'));
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '<script>') === false && strpos($html, 'MSMBooked') !== false && strpos($html, 'MSMMail_failed') !== false && strpos($html, 'value="book"') === false, 'result preserves booking success beside mail warning without replay button');
+$ui['results'][1]['invoice'] = array('id' => 42, 'ref' => 'INV-<42>', 'entity' => 1, 'customer_id' => 5, 'customer_created' => true,
+	'subscription_id' => 9, 'pdf' => array('status' => 'verified', 'message' => 'MSMPdfVerified'));
+$html = msmRenderBooking($ui, str_repeat('a', 32), array(1 => array('invoice' => true, 'customer' => true)));
+verify(strpos($html, '/compta/facture/card.php?facid=42') !== false && strpos($html, '/societe/card.php?socid=5') !== false, 'authorized invoice and created-customer links');
+verify(strpos($html, 'INV-&lt;42&gt;') !== false && strpos($html, 'MSMPdfVerified') !== false && strpos($html, 'value="book"') === false, 'escaped invoice result and PDF status without replay');
+$ui['results'][1] = array('status' => 'unknown', 'message' => 'MSMTransactionUnknown', 'id' => 0, 'amount' => 0, 'mail' => 'unknown', 'stop' => true,
+	'rollback' => 'unconfirmed', 'diagnostic' => array('stage' => '<commit>', 'subscription_id' => 9, 'invoice_id' => 42, 'customer_id' => 5));
+$html = msmRenderBooking($ui, str_repeat('a', 32));
+verify(strpos($html, '&lt;commit&gt;') !== false && strpos($html, 'MSMRollbackUnconfirmed') !== false && strpos($html, 'MSMUnconfirmedIdentifier') !== false, 'unknown transaction renders reconciliation evidence');
 // Narrow UI follow-up: state-specific title, no redundant cancel button, retained content.
 verify(msmPageTitleKey('preview') === 'MSMTitle', 'UI preview title unchanged');
 verify(msmPageTitleKey('confirm') === 'MSMConfirmTitle', 'UI separate confirmation title');
@@ -232,6 +245,7 @@ $ui['phase'] = 'preview'; $ui['rows'][1]['member'] = 'Synthetic Synthetic';
 $html = msmRenderPreview($ui, str_repeat('a', 32));
 verify(strpos($html, 'value="cancel"') === false && strpos($html, msmListUrl()) !== false, 'UI cancel removed and back link retained');
 verify(strpos($html, 'Synthetic Synthetic #1') !== false, 'UI repeated name parts preserved');
-$ui['phase'] = 'done'; $html = msmRenderBooking($ui, str_repeat('a', 32));
+$ui['phase'] = 'done'; $ui['results'][1] = array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'not_selected');
+$html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '/adherents/subscription.php?rowid=1') !== false && strpos($html, ' #9</a>') !== false, 'UI member subscription link and contribution ID retained');
 echo ($passed - $baseline)." booking/mail assertions passed (synthetic transactions and transports only).\n";

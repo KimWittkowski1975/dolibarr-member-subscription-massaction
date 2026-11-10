@@ -121,10 +121,14 @@ try {
 	$state['rows'] = array();
 }
 $titlekey = msmPageTitleKey($state['phase']);
-llxHeader('', $langs->trans($titlekey));
+$morejs = $state['phase'] === 'confirm' ? array(dol_buildpath('/membersubscriptionmassaction/js/subscription.js', 1)) : array();
+llxHeader('', $langs->trans($titlekey), '', '', 0, 0, $morejs);
 print load_fiche_titre($langs->trans($titlekey));
 if ($error) { print '<div class="error">'.msmText($error).'</div>'; }
-if ($state['rows']) { print $state['phase'] === 'preview' ? msmRenderPreview($state, $key) : msmRenderBooking($state, $key); }
+if ($state['rows']) {
+	$access = $state['phase'] === 'done' ? msmResultAccess($db, $user, $state) : array();
+	print $state['phase'] === 'preview' ? msmRenderPreview($state, $key) : msmRenderBooking($state, $key, $access);
+}
 else { print '<p><a href="'.dol_escape_htmltag(msmListUrl()).'">'.msmText('MSMBack').'</a></p>'; }
 llxFooter();
 $db->close();

@@ -29,7 +29,9 @@ class InvoiceObjectDouble
 	{
 		$this->db->calls[] = 'invoice-create';
 		if ($this->db->mode === 'create') { return -1; }
-		$this->db->invoice = (object) array('entity' => $this->entity, 'fk_soc' => $this->socid, 'type' => $this->type, 'fk_statut' => 0, 'paye' => 0, 'total_ttc' => 0, 'ref' => $this->ref);
+		$this->db->invoice = (object) array('entity' => $this->entity, 'fk_soc' => $this->socid, 'type' => $this->type, 'fk_statut' => 0, 'paye' => 0, 'total_ttc' => 0, 'ref' => $this->ref,
+			'datef' => $this->db->idate($this->date), 'fk_cond_reglement' => $this->cond_reglement_id, 'fk_mode_reglement' => $this->mode_reglement_id,
+			'fk_account' => $this->fk_account, 'multicurrency_code' => $this->multicurrency_code);
 		$this->db->link = $this->linked_objects === array('subscription' => 9);
 		return 42;
 	}
@@ -38,7 +40,9 @@ class InvoiceObjectDouble
 		$this->db->calls[] = 'invoice-line';
 		verify($args[1] === 0 && $args[2] === 1 && $args[13] === 'TTC' && $args[15] === 1, 'core gross-price arguments');
 		if ($this->db->mode === 'line') { return -1; }
-		$this->db->invoiceLine = (object) array('n' => 1, 'qty' => 1, 'total' => $args[14]); $this->db->invoice->total_ttc = $args[14];
+		$this->db->invoiceLine = (object) array('n' => 1, 'qty' => $args[2], 'total' => $args[14], 'description' => $args[0],
+			'product' => $args[6], 'product_type' => $args[15], 'vat' => $args[3], 'date_start' => $this->db->idate($args[8]));
+		$this->db->invoice->total_ttc = $args[14];
 		return 100;
 	}
 	public function validate($user)
@@ -80,7 +84,7 @@ function invoiceBookingFixture($create = false)
 	list($unused, $old, $row) = bookingFixture();
 	$db = new InvoiceDatabaseDouble(); $db->customerId = $create ? 0 : 4;
 	$member = new BookingMemberDouble($db); $member->id = 1; $member->entity = 1; $member->typeid = 1; $member->socid = $db->customerId; $member->morphy = 'phy'; $member->company = ''; $member->firstname = 'Synthetic'; $member->lastname = 'Invoice';
-	$row['invoice'] = array('customer_id' => $db->customerId, 'create_customer' => $create, 'entity' => 1, 'date' => '2026-11-10', 'term' => 1, 'payment_mode' => 0, 'bank' => 0, 'currency' => 'EUR', 'pdf_model' => 'crabe', 'product' => 0, 'vat' => 0);
+	$row['invoice'] = array('customer_id' => $db->customerId, 'create_customer' => $create, 'entity' => 1, 'date' => '2026-11-10', 'term' => 1, 'payment_mode' => 0, 'bank' => 0, 'currency' => 'EUR', 'pdf_model' => 'crabe', 'product' => 0, 'vat' => 0, 'quantity' => 1, 'price_base' => 'TTC', 'type' => 1);
 	$row['autocreate'] = $create;
 	$service = new InvoiceBookingDouble($db); $service->object = $member; $service->reader = new BookingPreviewDouble(); $service->reader->row = $row; $service->adapter = new InvoiceServiceDouble($db);
 	return array($db, $service, $row);

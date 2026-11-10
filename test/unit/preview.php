@@ -182,6 +182,7 @@ class PreviewMember
 	public $company = ''; public $address = ''; public $zip = ''; public $town = ''; public $country_id = 1; public $phone = '';
 	public $datefin = null; public $datevalid = null; public $status = 1; public $thirdparty;
 	public function getFullName($langs) { return '<Synthetic member>'; }
+	public function fetch_thirdparty() { return 0; }
 }
 class PreviewFixtureService extends MsmPreviewService
 {
@@ -211,6 +212,8 @@ $user->denied = array('societe.creer'); $row = $service->previewSubscriptionWith
 verify(in_array('NotEnoughPermissions', $row['errors'], true), 'third party creation permission'); $user->denied = array();
 $member->entity = 2; $row = $service->previewSubscriptionWithOptions($user, $start, true, false, null, true);
 verify(in_array('NotEnoughPermissions', $row['errors'], true), 'no planned third party outside current entity'); $member->entity = 1;
+$member->socid = 8; $row = $service->previewSubscriptionWithOptions($user, $start, true, false);
+verify(in_array('MSMThirdPartyInaccessible', $row['errors'], true), 'inaccessible existing third party differs from missing link'); $member->socid = 0;
 $member->email = ''; $conf->global->MAIN_DISABLE_ALL_MAILS = 1;
 $row = $service->previewSubscriptionWithOptions($user, $start, false, true);
 verify(in_array('SubscriptionBulkEmailMissing', $row['warnings'], true) && in_array('SubscriptionBulkEmailDisabled', $row['warnings'], true) && !$row['errors'], 'mail preflight warnings only'); $conf->global = new stdClass();
@@ -231,12 +234,13 @@ verify(iso(MsmPeriodService::subscriptionStartDateForBatch($member, $start)) ===
 $conf->global = new stdClass(); $conf->modules['societe'] = 1; $user = new PreviewUser();
 $state = array('revision' => 0, 'ids' => array(1), 'rows' => array(1 => $previous), 'options' => array('invoice' => true, 'autocreate' => false, 'sendmail' => false, 'description' => ''), 'common' => '');
 $post = array('revision' => '0', 'action' => 'refresh', 'common' => '', 'description' => '', 'invoice' => '1', 'autocreate' => '1', 'start' => array(1 => '2026-01-10'), 'end' => array(1 => '2026-02-09'));
-fails(static function () use ($state, $post) { msmUpdatePreview($state, $post); }, 'MSMInvalidForm');
+$planned = msmUpdatePreview($state, $post);
+verify($planned['options']['invoice'] && $planned['options']['autocreate'], 'OPT-02 explicit invoice and customer creation');
 unset($post['invoice'], $post['autocreate']); $post['sendmail'] = '1';
 $enabled = msmUpdatePreview($state, $post);
 verify($enabled['options']['sendmail'] && !$enabled['options']['invoice'] && !$enabled['options']['autocreate'], 'OPT-01 independent mail without invoices');
 foreach (array('invoice', 'autocreate') as $option) {
-	foreach (array('1', array('1'), 'yes') as $value) {
+	foreach (array(array('1'), 'yes') as $value) {
 		$bad = $post; $bad[$option] = $value;
 		fails(static function () use ($state, $bad) { msmUpdatePreview($state, $bad); }, 'MSMInvalidForm');
 	}
@@ -253,7 +257,9 @@ foreach (array(array(true, true, true, false), array(false, true, true, true), a
 	$user->denied = $case[2] ? array() : array('societe.creer');
 	$html = msmRenderPreview($state, str_repeat('a', 32));
 	preg_match('/<input[^>]*name="autocreate"[^>]*>/', $html, $m);
-	verify(isset($m[0]) && strpos($m[0], ' disabled') !== false && strpos($m[0], ' checked') === false, 'OPT-09 renderer dependency matrix');
+	$enabledOption = $case[0] && $case[1] && $case[2];
+	verify(isset($m[0]) && (strpos($m[0], ' disabled') === false) === $enabledOption
+		&& (strpos($m[0], ' checked') !== false) === $enabledOption, 'OPT-09 renderer dependency matrix');
 }
 $conf->modules['societe'] = 1; $user->denied = array();
 echo $passed." assertions passed (V22 calendar APIs, synthetic business data; no database connection).\n";

@@ -1,8 +1,9 @@
 # Member Subscription Massaction for Dolibarr
 
-**Unreleased Phase 3B: subscription booking and optional confirmation email are
-implemented and validated within the documented Dolibarr 22.0.5 scope. Do not use
-in production.**
+**Unreleased Phase 4: optional invoice, post-commit PDF and attached confirmation
+email paths are implemented and synthetically validated against the Dolibarr 22.0.5
+source contracts. Real invoice/PDF/SMTP/browser integration and independent review
+remain pending. Do not use in production.**
 
 Real booking/database integration and authenticated HTTP replay tests have been
 performed; manual browser acceptance passed 9/9. The owner confirmed receipt of the
@@ -13,8 +14,9 @@ See [Phase 3B validation](docs/phase3b-validation.md) for evidence, limitations 
 the owner's scoped residual-risk acceptance.
 
 The module adds an authenticated member-list preview, an explicit confirmation and
-per-member booking results. It never creates invoices, third parties, PDFs, payments
-or bank entries itself. These options are disabled and rejected server-side.
+per-member booking results. It can optionally create a linked third party, a validated
+standard invoice and its PDF through Dolibarr Core APIs. It never creates payments or
+bank entries. Invoice use remains unqualified until the separate real integration gate.
 
 ## Origin and scope
 
@@ -52,9 +54,10 @@ availability does not imply a released, installable production module.
 7. Select members in the member list, choose **Create member subscriptions (bulk)**
    and press the existing **Confirm** button. The hook opens the financial preview.
    Change individual dates, reset one end, or explicitly apply a common start/calendar
-   rule. Select confirmation email independently, then review the separate confirmation.
+   rule. Select invoice and confirmation email independently. Missing linked third
+   parties can be created only after selecting the separate explicit option. Then review the confirmation.
    Confirm each displayed overlap explicitly and use **Book confirmed subscriptions now**.
-   Missing overlap consent skips that row. Invoice and third-party options remain disabled.
+   Missing overlap consent skips that row. An invoice email requires the verified PDF attachment.
 8. The preview provides a Back link to the member list without invalidating the
    preview. It remains available until normal expiry. No separate Cancel button is
    rendered; an internal cancel route is retained. Deactivation removes the list action.
@@ -79,7 +82,7 @@ redirect destinations are fixed internal paths. No untrusted return URL is used.
 GET never books. Confirmation is consumed and saved before processing. Member rows
 are locked and revalidated within independent InnoDB transactions; the V22 end-date
 update return and actual saved values are checked before commit. Only confirmed
-commits can proceed to mail. Results survive reload within the session; uncertain
+commits can proceed to PDF generation and mail. Results survive reload within the session; uncertain
 outcomes require manual database inspection, never an automatic retry.
 
 Booking currently supports the mysqli driver with MySQL/MariaDB and InnoDB only.
@@ -89,15 +92,18 @@ There is no durable operation journal, SMTP queue or exactly-once claim. Core an
 third-party actions need not honor the module's member-row lock. Core triggers still
 run and can have nontransactional side effects; inventory them before real tests.
 
-The results page uses plain escaped HTML and remains available without a timed toast.
-No JavaScript is required. See [Phase 3B validation](docs/phase3b-validation.md) for
+The results page uses escaped HTML and remains available without a timed toast. Its
+final-submit status indicator resets on BFCache restoration; the complete form remains
+usable without JavaScript. See [Phase 4 implementation validation](docs/phase4-implementation-validation.md) and [Phase 3B validation](docs/phase3b-validation.md) for
 transaction, crash, hook and unexecuted integration-test boundaries.
 
 ## Checks and next phase
 
 Run `php test/unit/run.php` and
 `DOLIBARR_TEST_ROOT=/path/to/dolibarr php test/unit/booking.php` and
-`php test/unit/maildelivery.php` (no dependencies
+`php test/unit/maildelivery.php`, `php test/unit/invoiceprofile.php`,
+`php test/unit/invoice.php`, `php test/unit/invoicepdf.php`,
+`php test/unit/postcommit.php` and `node test/unit/loading.js` (no dependencies
 or database bootstrap). The booking runner includes the existing preview runner and requires a V22.0.5 checkout.
 See [Phase 3B validation](docs/phase3b-validation.md) for current evidence and limitations;
 [Phase 3A validation](docs/phase3a-validation.md) preserves historical evidence.

@@ -23,7 +23,9 @@ jobs:
       - name: Whitespace (including the initial commit)
         run: git diff-tree --check --root -r HEAD
       - name: Unit contracts and structure
-        run: php test/unit/run.php
+        run: |
+          php test/unit/run.php
+          node test/unit/loading.js
       - uses: actions/checkout@v4
         with:
           repository: Dolibarr/dolibarr

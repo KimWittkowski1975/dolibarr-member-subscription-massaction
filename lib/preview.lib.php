@@ -179,7 +179,6 @@ function msmUpdatePreview(array $state, array $post)
 		if (isset($post[$field]) && $post[$field] !== '1') { throw new InvalidArgumentException('MSMInvalidForm'); }
 		$state['options'][$field] = isset($post[$field]);
 	}
-	if (!empty($post['invoice']) || !empty($post['autocreate'])) { throw new InvalidArgumentException('MSMInvalidForm'); }
 	// A no-JavaScript form can still submit the previously checked dependent box.
 	// Disabling invoices only removes an option; it never grants an action.
 	if (!$state['options']['invoice']) { $state['options']['autocreate'] = false; }

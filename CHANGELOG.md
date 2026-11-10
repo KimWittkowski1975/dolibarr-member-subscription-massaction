@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add optional, transactionally linked and validated member-subscription invoices.
+- Add explicit missing-third-party creation consent and deterministic invoice preflight.
+- Generate and verify invoice PDFs after commit and require them for standard invoice email.
+- Report invoice, customer, PDF, mail, rollback and uncertain outcomes separately.
+- Add final-submit/BFCache UI handling and synthetic Phase 4 profile, transaction, file and mail tests.
+
 - Add explicit, single-use booking confirmation and persistent per-member results.
 - Book through the V22 member API with owned transactions, member locks and R16 checks.
 - Send optional confirmation mail only after commit, preserving subscription hooks and templates.

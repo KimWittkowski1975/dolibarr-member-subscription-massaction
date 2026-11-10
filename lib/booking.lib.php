@@ -6,8 +6,7 @@
 function msmBookingPost(array $state, array $post, $action)
 {
 	if (array_diff(array_keys($post), array('token', 'preview', 'revision', 'action', 'overlap'))
-		|| ($post['action'] ?? null) !== $action || ($post['revision'] ?? null) !== (string) $state['revision']
-		|| !empty($state['options']['invoice']) || !empty($state['options']['autocreate'])) { throw new InvalidArgumentException('MSMInvalidForm'); }
+		|| ($post['action'] ?? null) !== $action || ($post['revision'] ?? null) !== (string) $state['revision']) { throw new InvalidArgumentException('MSMInvalidForm'); }
 	$overlap = $post['overlap'] ?? array();
 	if (!is_array($overlap) || array_diff(array_keys($overlap), $state['ids'])) { throw new InvalidArgumentException('MSMInvalidForm'); }
 	foreach ($overlap as $value) { if ($value !== '1') { throw new InvalidArgumentException('MSMInvalidForm'); } }
@@ -55,4 +54,33 @@ function msmProcessBooking(array $state, $service, $mailer, $user, callable $sav
 	}
 	$state['phase'] = 'done'; $save($state);
 	return $state;
+}
+
+/** Recheck object access for result links without changing the completed operation. */
+function msmResultAccess($db, $user, array $state)
+{
+	$access = array();
+	foreach ($state['results'] ?? array() as $id => $result) {
+		$access[$id] = array('invoice' => false, 'customer' => false);
+		if (empty($result['invoice']['id'])) { continue; }
+		try {
+			if (!empty($user->socid) || !isModEnabled('invoice') || !isModEnabled('societe')
+				|| !$user->hasRight('facture', 'lire') || !$user->hasRight('societe', 'lire')) { continue; }
+			require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
+			$invoice = new Facture($db);
+			if ($invoice->fetch((int) $result['invoice']['id']) > 0
+				&& (int) $invoice->entity === (int) $result['invoice']['entity']
+				&& (int) $invoice->socid === (int) $result['invoice']['customer_id']
+				&& in_array((int) $invoice->entity, array_map('intval', explode(',', getEntity('invoice'))), true)
+				&& checkUserAccessToObject($user, array('facture'), $invoice)) { $access[$id]['invoice'] = true; }
+			if (!empty($result['invoice']['customer_created']) && $user->hasRight('societe', 'lire')) {
+				require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+				$customer = new Societe($db);
+				if ($customer->fetch((int) $result['invoice']['customer_id']) > 0
+					&& in_array((int) $customer->entity, array_map('intval', explode(',', getEntity('societe'))), true)
+					&& checkUserAccessToObject($user, array('societe'), $customer)) { $access[$id]['customer'] = true; }
+			}
+		} catch (Throwable $ignored) {}
+	}
+	return $access;
 }
