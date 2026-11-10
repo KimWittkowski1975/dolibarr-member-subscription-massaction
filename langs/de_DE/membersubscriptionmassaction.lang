@@ -90,3 +90,4 @@ MSMConfirmTitle=Mitgliedsbeiträge gesammelt - Buchungsbestätigung
 MSMProcessingTitle=Mitgliedsbeiträge gesammelt - Verarbeitung läuft oder ist unterbrochen
 
 MSMInvoiceProfileUnsupported=Das Rechnungsprofil wird nicht unterstützt oder ist unvollständig. Währung, Steuern, Zahlungsbedingungen, Verpackungseinheiten und Rechnungsmodelle prüfen.
+MSMInvoiceFailed=Die Rechnungsverarbeitung ist fehlgeschlagen. Vor einem manuellen Wiederholungsversuch den Rollback-Status prüfen.

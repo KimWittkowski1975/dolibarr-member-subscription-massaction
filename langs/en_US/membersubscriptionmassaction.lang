@@ -90,3 +90,4 @@ MSMConfirmTitle=Bulk member subscriptions - Booking confirmation
 MSMProcessingTitle=Bulk member subscriptions - Processing or interrupted
 
 MSMInvoiceProfileUnsupported=The invoice profile is unsupported or incomplete. Check currency, tax, payment terms, product packaging and invoice models.
+MSMInvoiceFailed=Invoice processing failed. Inspect the rollback status before any manual retry.

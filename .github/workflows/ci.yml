@@ -37,3 +37,4 @@ jobs:
           php test/unit/booking.php
           php test/unit/maildelivery.php
           php test/unit/invoiceprofile.php
+          php test/unit/invoice.php
