@@ -37,8 +37,8 @@ function msmInvoicePlanDetails(array $row)
 	$term = (string) ($plan['term_label'] ?? '');
 	$term = ($term !== '' ? $term.' ' : '').'(#'.((int) $plan['term']).')';
 	return msmText('MSMInvoicePlanDetails', price($row['amount']).' '.$conf->currency,
-		dol_print_date(msmReadDate($plan['date']), 'day'), price($plan['vat']).'%', $product, $term,
-		(string) $plan['number_model'], (string) $plan['pdf_model']);
+		dol_print_date(msmReadDate($plan['date']), 'day'), price($plan['vat']).'%', $product, $term)
+		.'<br>'.msmText('MSMInvoicePlanModels', (string) $plan['number_model'], (string) $plan['pdf_model']);
 }
 
 /** Warn when the confirmed Core setting may create a contact with a new third party. */

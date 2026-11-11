@@ -263,5 +263,38 @@ verify(strpos($html, 'Synthetic Synthetic #1') !== false, 'UI repeated name part
 $ui['phase'] = 'done'; $ui['results'][1] = array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'not_selected');
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '/adherents/subscription.php?rowid=1') !== false && strpos($html, ' #9</a>') !== false, 'UI member subscription link and contribution ID retained');
+// Exercise the actual V22 Translate limit with the shipped translations and renderer.
+foreach (array('en_US', 'de_DE') as $locale) {
+ $langs = new Translate(DOL_DOCUMENT_ROOT, $conf); $langs->setDefaultLang($locale);
+ foreach (file(__DIR__.'/../../langs/'.$locale.'/membersubscriptionmassaction.lang', FILE_IGNORE_NEW_LINES) as $entry) {
+  if ($entry !== '' && $entry[0] !== '#' && strpos($entry, '=') !== false) { list($k,$v)=explode('=', $entry, 2); $langs->tab_translate[$k]=$v; }
+ }
+ $langs->tab_translate['G2LegacySeven'] = '%s %s %s %s %s %s %s';
+ // PHP 7.4 warns/returns false for missing sprintf arguments; PHP 8 throws.
+ $legacyWarning = false; $legacyException = false; $legacyResult = null;
+ set_error_handler(static function ($severity, $message, $file, $line) use (&$legacyWarning) {
+  if (strpos($message, 'sprintf') !== false) { $legacyWarning = true; return true; }
+  throw new ErrorException($message, 0, $severity, $file, $line);
+ });
+ try { $legacyResult = $langs->transnoentities('G2LegacySeven','1','2','3','4','5','6','7'); }
+ catch (ArgumentCountError $e) { $legacyException = true; }
+ finally { restore_error_handler(); }
+ verify(PHP_VERSION_ID >= 80000 ? $legacyException : ($legacyWarning && $legacyResult !== '1 2 3 4 5 6 7'), 'V22 seven-parameter regression reproduces');
+ foreach (array(false,true) as $invoiceSelected) {
+  $testui=$ui; $testui['phase']='preview'; $testui['options']['invoice']=$invoiceSelected;
+  $testui['rows'][1]=$display;
+  if (!$invoiceSelected) { unset($testui['rows'][1]['invoice']); }
+  $missing=$display; unset($missing['invoice']); $missing['thirdparty']=''; $missing['status']='error';$missing['errors']=array('SubscriptionBulkThirdPartyMissing');$missing['notices']=$missing['errors'];
+  $testui['rows'][13]=$missing;
+  $rendered=msmRenderPreview($testui,str_repeat('a',32));
+  verify(strpos($rendered,'name="start[1]"')!==false && strpos($rendered,'name="start[13]"')!==false,'V22 translated mixed preview renders '.$locale);
+  if ($invoiceSelected) {
+   foreach (array(dol_escape_htmltag(price($display['amount']).' '.$conf->currency), dol_escape_htmltag(dol_print_date(msmReadDate('2026-11-10'), 'day')), 'P-&lt;7&gt;', 'RECEP - &lt;Immediate &amp; safe&gt;', 'mod_&lt;unsafe&gt;', 'pdf_&amp;unsafe', '19') as $expected) {
+    verify(strpos($rendered,$expected)!==false,'V22 translated invoice details retained '.$locale);
+   }
+  }
+  verify(strpos($rendered,'<script>')===false,'V22 translated renderer escapes hostile labels '.$locale);
+ }
+}
 $langs = $renderLangs;
 echo ($passed - $baseline)." booking/mail assertions passed (synthetic transactions and transports only).\n";
