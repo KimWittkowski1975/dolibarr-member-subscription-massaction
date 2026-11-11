@@ -23,6 +23,15 @@ class MsmInvoiceProfile
 		$term = new PaymentTerm($this->db);
 		return (int) $term->getDefaultId();
 	}
+	protected function paymentTermLabel($id)
+	{
+		require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/paymentterm.class.php';
+		$term = new PaymentTerm($this->db);
+		if ($term->fetch($id) <= 0 || (int) $term->id !== (int) $id) { throw new RuntimeException('MSMInvoiceProfileUnsupported'); }
+		$label = trim((string) $term->code.((string) $term->libelle !== '' ? ' - '.$term->libelle : ''));
+		if ($label === '') { throw new RuntimeException('MSMInvoiceProfileUnsupported'); }
+		return $label;
+	}
 	protected function vat($product)
 	{
 		global $mysoc;
@@ -63,6 +72,7 @@ class MsmInvoiceProfile
 		if (!is_numeric($vat) || !is_finite((float) $vat) || $vat < 0) { throw new RuntimeException('MSMInvoiceProfileUnsupported'); }
 		$term = !empty($customer->cond_reglement_id) ? (int) $customer->cond_reglement_id : $this->paymentTerm();
 		if ($term <= 0) { throw new RuntimeException('MSMInvoiceProfileUnsupported'); }
+		$termLabel = $this->paymentTermLabel($term);
 		$number = getDolGlobalString('FACTURE_ADDON', 'mod_facture_terre');
 		$pdf = getDolGlobalString('FACTURE_ADDON_PDF_0');
 		if ($pdf === '') { $pdf = getDolGlobalString('FACTURE_ADDON_PDF'); }
@@ -72,11 +82,11 @@ class MsmInvoiceProfile
 		foreach (array('ADHERENT_BANK_USE', 'ADHERENT_VAT_FOR_SUBSCRIPTIONS', 'ADHERENT_PRODUCT_ID_FOR_SUBSCRIPTIONS', 'FACTURE_ADDON', 'FACTURE_ADDON_PDF_0', 'FACTURE_ADDON_PDF', 'FACTURE_ADDON_PDF_STANDARD', 'FACTURE_RIB_NUMBER', 'SOCIETE_CODECLIENT_ADDON', 'THIRDPARTY_DEFAULT_CREATE_CONTACT', 'THIRDPARTY_CUSTOMERCODE_EQUALS_MEMBERREF', 'SOCIETE_USEPREFIX', 'MAIN_USE_ADVANCED_PERMS', 'MAIN_ROUNDOFTOTAL_NOT_TOTALOFROUND', 'MAIN_MAX_DECIMALS_TOT', 'MAIN_MAX_DECIMALS_UNIT', 'MAIN_MAX_DECIMALS_SHOWN', 'MAIN_DISABLE_ALL_MAILS') as $name) { $settings[$name] = getDolGlobalString($name); }
 		return array('entity' => (int) $conf->entity, 'currency' => $conf->currency,
 			'date' => dol_print_date(dol_now(), '%Y-%m-%d'), 'product' => $productid, 'vat' => (float) $vat,
-			'quantity' => 1, 'type' => $product ? (int) $product->type : 1, 'price_base' => 'TTC', 'term' => $term,
+			'quantity' => 1, 'type' => $product ? (int) $product->type : 1, 'price_base' => 'TTC', 'term' => $term, 'term_label' => $termLabel,
 			'payment_mode' => (int) ($customer->mode_reglement_id ?? 0), 'bank' => (int) ($customer->fk_account ?? getDolGlobalInt('FACTURE_RIB_NUMBER')),
 			'number_model' => $number, 'pdf_model' => $pdf, 'customer_id' => (int) ($customer->id ?? 0), 'create_customer' => !$customer,
 			'customer_snapshot' => self::fields($customer, array('id', 'entity', 'client', 'code_client', 'name', 'address', 'zip', 'town', 'country_id', 'tva_assuj', 'tva_intra', 'localtax1_assuj', 'localtax2_assuj', 'default_lang', 'email', 'cond_reglement_id', 'mode_reglement_id', 'fk_account', 'multicurrency_code')),
-			'product_snapshot' => self::fields($product, array('id', 'entity', 'status', 'type', 'packaging', 'tva_tx', 'localtax1_tx', 'localtax2_tx', 'fk_unit')),
+			'product_snapshot' => self::fields($product, array('id', 'entity', 'status', 'type', 'ref', 'label', 'packaging', 'tva_tx', 'localtax1_tx', 'localtax2_tx', 'fk_unit')),
 			'company_snapshot' => self::fields($mysoc, array('country_id', 'tva_assuj', 'tva_intra', 'localtax1_assuj', 'localtax2_assuj', 'default_lang')),
 			'settings' => $settings);
 	}

@@ -221,7 +221,7 @@ function msmEvaluatePreview($db, $user, array $state)
 function msmInvoiceDefault($user)
 {
 	return getDolGlobalString('ADHERENT_BANK_USE') === 'invoiceonly'
-		&& MsmPreviewService::canCreateSubscriptionWithOptions($user, true, (bool) getDolGlobalInt('ADHERENT_DEFAULT_SENDINFOBYMAIL'));
+		&& MsmPreviewService::canCreateSubscriptionWithOptions($user, true, false);
 }
 
 /** Old confirmed previews need fresh consent; consumed runs must never reopen. */

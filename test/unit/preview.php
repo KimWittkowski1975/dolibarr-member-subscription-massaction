@@ -75,6 +75,10 @@ foreach (array('adherent.lire', 'adherent.cotisation.creer', 'facture.lire', 'fa
 	verify(!MsmPreviewService::canCreateSubscriptionWithOptions($user, true, true), 'required right '.$right);
 }
 $user->denied = array('facture.creer'); verify(MsmPreviewService::canCreateSubscriptionWithOptions($user, false, true), 'invoice rights irrelevant without invoice'); $user->denied = array();
+$user->denied = array('facture.invoice_advance.send');
+verify(MsmPreviewService::canCreateSubscriptionWithOptions($user, true, false), 'invoice without mail does not require advanced send right');
+verify(!MsmPreviewService::canCreateSubscriptionWithOptions($user, true, true), 'invoice mail requires advanced send right');
+$user->denied = array();
 foreach (array('member', 'invoice', 'societe') as $module) { unset($conf->modules[$module]); verify(!MsmPreviewService::canCreateSubscriptionWithOptions($user, true), 'disabled module'); $conf->modules[$module] = 1; }
 $user->socid = 2; verify(!MsmPreviewService::canCreateSubscriptionWithOptions($user), 'external user'); $user->socid = 0;
 foreach (array('2026-02-31', '2027-02-29', '1969-12-31', '9999-01-01', '', '2026-1-01', '2026-01', array('2026-01-01'), null, 123) as $v) { verify(msmReadDate($v) === 0, 'strict invalid calendar input'); }
@@ -261,5 +265,9 @@ foreach (array(array(true, true, true, false), array(false, true, true, true), a
 	verify(isset($m[0]) && (strpos($m[0], ' disabled') === false) === $enabledOption
 		&& (strpos($m[0], ' checked') !== false) === $enabledOption, 'OPT-09 renderer dependency matrix');
 }
+$state['options']['invoice'] = true; $state['options']['sendmail'] = true; $user->denied = array('facture.invoice_advance.send');
+$html = msmRenderPreview($state, str_repeat('a', 32));
+preg_match('/<input[^>]*name="invoice"[^>]*>/', $html, $m);
+verify(isset($m[0]) && strpos($m[0], ' disabled') === false, 'invoice renderer availability independent from selected mail');
 $conf->modules['societe'] = 1; $user->denied = array();
 echo $passed." assertions passed (V22 calendar APIs, synthetic business data; no database connection).\n";

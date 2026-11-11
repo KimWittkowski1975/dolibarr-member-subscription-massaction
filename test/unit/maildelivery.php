@@ -41,8 +41,8 @@ class InvoiceAttachmentDouble
 }
 class InvoiceDeliveryHooks
 {
-	public $code = 0;
-	public function executeHooks($name, $params, &$object, &$action) { return $this->code; }
+	public $code = 0; public $calls = 0;
+	public function executeHooks($name, $params, &$object, &$action) { $this->calls++; return $this->code; }
 }
 class InvoiceDeliveryAdapter extends DeliveryAdapter
 {
@@ -69,11 +69,15 @@ $invoiceMail->pdfAdapter = new InvoiceAttachmentDouble(); $invoiceMail->hookAdap
 $invoice = array('id' => 42, 'pdf' => array('status' => 'verified', 'sha256' => 'synthetic'));
 checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'transport', 'invoice mail standard transport');
 checkMail($last_mail[2] === array('/isolated/INV-SYNTHETIC.pdf') && $last_mail[3] === array('application/pdf') && $last_mail[4] === array('INV-SYNTHETIC.pdf'), 'verified invoice PDF attached');
+checkMail($invoiceMail->pdfAdapter->calls === 2 && $invoiceMail->hookAdapter->calls === 1, 'invoice PDF verified before hook and again before standard transport');
 $invoice['pdf']['status'] = 'failed';
 checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'attachment_missing', 'failed PDF blocks standard transport');
+checkMail($invoiceMail->hookAdapter->calls === 1, 'missing PDF blocks hook dispatch');
 $invoice['pdf']['status'] = 'verified'; $invoiceMail->pdfAdapter->fail = true;
 checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'attachment_missing', 'changed PDF blocks standard transport');
+checkMail($invoiceMail->hookAdapter->calls === 1, 'changed PDF blocks hook dispatch');
+$invoiceMail->pdfAdapter->fail = false;
 $invoiceMail->hookAdapter->code = 1;
 checkMail($invoiceMail->send($member, $row, new stdClass(), true, $invoice) === 'hook', 'positive hook remains distinct from standard invoice transport');
-checkMail($invoiceMail->pdfAdapter->calls === 2, 'takeover hook does not resolve standard attachment');
+checkMail($invoiceMail->pdfAdapter->calls === 4 && $invoiceMail->hookAdapter->calls === 2, 'verified PDF required before hook takeover without second transport resolution');
 echo $passed." mail adapter assertions passed (template/type/transport doubles; no SMTP).\n";

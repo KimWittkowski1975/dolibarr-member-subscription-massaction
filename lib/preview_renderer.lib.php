@@ -23,6 +23,34 @@ function msmPageTitleKey($phase)
 	return $keys[$phase] ?? 'MSMProcessingTitle';
 }
 
+/** Render only the server-confirmed invoice profile stored with the preview row. */
+function msmInvoicePlanDetails(array $row)
+{
+	global $conf, $langs;
+	$plan = $row['invoice'];
+	$product = $langs->transnoentities('MSMInvoiceProductNone');
+	if (!empty($plan['product'])) {
+		$snapshot = $plan['product_snapshot'] ?? array();
+		$product = trim((string) ($snapshot['ref'] ?? '').((string) ($snapshot['label'] ?? '') !== '' ? ' - '.$snapshot['label'] : ''));
+		$product = ($product !== '' ? $product.' ' : '').'(#'.((int) $plan['product']).')';
+	}
+	$term = (string) ($plan['term_label'] ?? '');
+	$term = ($term !== '' ? $term.' ' : '').'(#'.((int) $plan['term']).')';
+	return msmText('MSMInvoicePlanDetails', price($row['amount']).' '.$conf->currency,
+		dol_print_date(msmReadDate($plan['date']), 'day'), price($plan['vat']).'%', $product, $term,
+		(string) $plan['number_model'], (string) $plan['pdf_model']);
+}
+
+/** Warn when the confirmed Core setting may create a contact with a new third party. */
+function msmInvoiceMayCreateContact(array $state)
+{
+	if (empty($state['options']['autocreate'])) { return false; }
+	foreach ($state['rows'] as $row) {
+		if (!empty($row['invoice']['create_customer']) && !empty($row['invoice']['settings']['THIRDPARTY_DEFAULT_CREATE_CONTACT'])) { return true; }
+	}
+	return false;
+}
+
 /** Pure rendering; dates/amounts/statuses come from the server-side services. */
 function msmRenderPreview(array $state, $key)
 {
@@ -34,7 +62,7 @@ function msmRenderPreview(array $state, $key)
 	$html .= '<fieldset><legend>'.msmText('MSMOptions').'</legend>';
 	$html .= msmDateField('common', $state['common'], $langs->transnoentities('SubscriptionBulkCommonStart'));
 	$html .= '<button class="button" name="action" value="common">'.msmText('SubscriptionBulkApplyCommon').'</button><br>';
-	$invoiceAvailable = MsmPreviewService::canCreateSubscriptionWithOptions($user, true, $state['options']['sendmail']);
+	$invoiceAvailable = MsmPreviewService::canCreateSubscriptionWithOptions($user, true, false);
 	foreach (array('sendmail' => 'MSMPlanMail', 'invoice' => 'MSMPlanInvoice', 'autocreate' => 'MSMPlanThirdParty') as $option => $label) {
 		$disabled = ($option === 'invoice' && !$invoiceAvailable)
 			|| ($option === 'autocreate' && (!$state['options']['invoice'] || !msmCanPlanThirdParty(true, $user)));
@@ -42,6 +70,7 @@ function msmRenderPreview(array $state, $key)
 	}
 	if (!$invoiceAvailable) { $html .= '<div class="info">'.msmText('MSMInvoiceUnavailable').'</div>'; }
 	if ($state['options']['invoice'] && $state['options']['sendmail']) { $html .= '<div class="info">'.msmText('MSMInvoiceMailPdfRequired').'</div>'; }
+	if (msmInvoiceMayCreateContact($state)) { $html .= '<div class="warning">'.msmText('MSMThirdPartyContactMayBeCreated').'</div>'; }
 	$html .= '<label>'.msmText('SubscriptionBulkDescriptionLabel').' <input class="minwidth300" type="text" name="description" maxlength="1024" value="'.dol_escape_htmltag($state['options']['description']).'"></label>';
 	$html .= '<p>'.msmText('SubscriptionBulkDescriptionHelp').'</p></fieldset>';
 	$month = getDolGlobalInt('MEMBER_SUBSCRIPTION_SUGGEST_END_OF_MONTH');
@@ -69,8 +98,7 @@ function msmRenderPreview(array $state, $key)
 		$html .= '<td>'.dol_escape_htmltag($row['thirdparty']).'</td><td>'.msmText($row['status'] === 'error' ? 'SubscriptionBulkError' : ($row['status'] === 'warning' ? 'SubscriptionBulkWarning' : 'SubscriptionBulkReady')).'</td><td>';
 		foreach ($row['notices'] as $notice) { $html .= '<div>'.msmText($notice).'</div>'; }
 		if (!empty($row['invoice'])) {
-			$html .= '<div>'.msmText('MSMInvoicePlanDetails', price($row['amount']).' '.$conf->currency,
-				dol_print_date(msmReadDate($row['invoice']['date']), 'day'), price($row['invoice']['vat']).'%', $row['invoice']['pdf_model']).'</div>';
+			$html .= '<div>'.msmInvoicePlanDetails($row).'</div>';
 		}
 		if ($row['quantity'] == 1 && $row['unit'] === 'd' && $row['end'] > 0) { $html .= '<div>'.msmText('MSMOneDay', dol_print_date($row['end'], 'day')).'</div>'; }
 		$html .= '<div>'.dol_escape_htmltag($row['description']).'</div></td></tr>';

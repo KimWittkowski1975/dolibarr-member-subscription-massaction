@@ -7,9 +7,12 @@ require __DIR__.'/../../class/invoice.class.php';
 $beforeInvoice = $passed;
 class InvoiceDatabaseDouble extends BookingDatabase
 {
-	public $invoice = null; public $invoiceLine = null; public $link = false; public $customerId = 4; public $mode = ''; public $calls = array();
+	public $invoice = null; public $invoiceLine = null; public $link = false; public $customerId = 4; public $mode = ''; public $calls = array(); public $nonTransactionalTable = '';
 	public function query($sql)
 	{
+		if ($this->nonTransactionalTable !== '' && strpos($sql, 'SELECT ENGINE AS engine') === 0 && strpos($sql, "'test_".$this->nonTransactionalTable."'") !== false) {
+			$this->queries[] = $sql; return (object) array('rows' => array((object) array('engine' => 'MyISAM')));
+		}
 		if (strpos($sql, 'SELECT fk_soc FROM') === 0) { $r = (object) array('fk_soc' => $this->customerId); }
 		elseif (strpos($sql, 'SELECT entity, fk_soc') === 0) { $r = $this->invoice; }
 		elseif (strpos($sql, 'SELECT COUNT(*) AS n, SUM(qty)') === 0) { $r = $this->invoiceLine; }
@@ -107,6 +110,16 @@ foreach (array('success', 'customer', 'commit') as $mode) {
 }
 list($db, $service, $row) = invoiceBookingFixture(); $row['amount'] = 0; $service->reader->row = $row; $opts['autocreate'] = false;
 verify($service->book(1, $row, $opts, $user, false)['status'] === 'success', 'zero gross invoice allowed');
+list($db, $service, $row) = invoiceBookingFixture();
+$description = 'Fee & <b>HTML-like</b> "quoted" \'single\' Ä {Unknown} &amp;';
+$row['description'] = $description; $service->reader->row = $row; $opts['description'] = $description;
+verify($service->book(1, $row, $opts, $user, false)['status'] === 'success', 'invoice description special characters booked');
+$encoded = dol_escape_htmltag($description, 1, 1, '', 1);
+verify($db->invoiceLine->description === $encoded && strpos($db->invoiceLine->description, '&amp;amp;') === false, 'invoice description encoded exactly once at adapter boundary');
+verify($db->saved->note === $description && strpos($db->invoiceLine->description, 'Ä') !== false && strpos($db->invoiceLine->description, '{Unknown}') !== false, 'contribution description stays plain and Unicode placeholders survive');
+list($db, $service, $row) = invoiceBookingFixture(); $db->nonTransactionalTable = 'ecm_files';
+$blocked = $service->book(1, $row, $opts, $user, false);
+verify($blocked['status'] === 'failed' && $blocked['message'] === 'MSMTransactionUnsupported' && !$db->calls && !in_array('subscription', $db->events, true), 'nontransactional ecm_files rejected before writes');
 list($db, $service, $row) = invoiceBookingFixture(); $user->denied = array('facture.creer');
 verify($service->book(1, $row, $opts, $user, false)['status'] === 'failed' && !$db->calls && !$db->events, 'invoice permission checked before writes');
 $user->denied = array();

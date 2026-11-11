@@ -73,6 +73,12 @@ class MsmSubscriptionMail
 		} catch (Throwable $e) { return 'unknown'; }
 		if (getDolGlobalInt('MAIN_DISABLE_ALL_MAILS')) { return 'disabled'; }
 		if (!isValidEmail((string) $member->email)) { return 'missing'; }
+		$attachment = null;
+		if ($invoice !== null) {
+			if (($invoice['pdf']['status'] ?? '') !== 'verified') { return 'attachment_missing'; }
+			try { $attachment = $this->pdf()->attachment($invoice, $invoice['pdf'], $user); }
+			catch (Throwable $e) { return 'attachment_missing'; }
+		}
 		$previous = $hookmanager; $previousLangs = $langs;
 		try {
 			$object = clone $member; $action = 'subscription';
@@ -84,9 +90,8 @@ class MsmSubscriptionMail
 			// Respect a valid replacement, never silently change the confirmed recipient.
 			if (!($object instanceof Adherent) || (int) $object->id !== (int) $member->id || (int) $object->entity !== (int) $member->entity || $object->email !== $member->email || (int) $object->typeid !== (int) $member->typeid) { return 'failed'; }
 			if (getDolGlobalInt('MAIN_DISABLE_ALL_MAILS')) { return 'disabled'; }
-			$attachment = null;
 			if ($invoice !== null) {
-				if (($invoice['pdf']['status'] ?? '') !== 'verified') { return 'attachment_missing'; }
+				// A hook may have changed the file after the first mandatory verification.
 				try { $attachment = $this->pdf()->attachment($invoice, $invoice['pdf'], $user); }
 				catch (Throwable $e) { return 'attachment_missing'; }
 			}

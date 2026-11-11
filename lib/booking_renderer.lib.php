@@ -14,6 +14,7 @@ function msmRenderBooking(array $state, $key, array $access = array())
 		$html .= '<p>'.msmText('MSMPlanInvoice').': '.msmText($state['options']['invoice'] ? 'Yes' : 'No').'</p>';
 		$html .= '<p>'.msmText('MSMPlanThirdParty').': '.msmText($state['options']['autocreate'] ? 'Yes' : 'No').'</p>';
 		if ($state['options']['invoice'] && $state['options']['sendmail']) { $html .= '<p class="info">'.msmText('MSMInvoiceMailPdfRequired').'</p>'; }
+		if (msmInvoiceMayCreateContact($state)) { $html .= '<p class="warning">'.msmText('MSMThirdPartyContactMayBeCreated').'</p>'; }
 	}
 	$html .= '<div class="div-table-responsive"><table class="noborder centpercent"><tr class="liste_titre">';
 	foreach (array('Member', 'Type', 'Amount', 'DateSubscription', 'DateEndSubscription', 'SubscriptionBulkDescriptionLabel', 'Status') as $label) { $html .= '<th>'.msmText($label).'</th>'; }
@@ -25,6 +26,7 @@ function msmRenderBooking(array $state, $key, array $access = array())
 		$html .= '<td>'.dol_escape_htmltag($row['description']).'</td><td>';
 		if ($confirm) {
 			foreach ($row['notices'] as $notice) { $html .= '<div>'.msmText($notice).'</div>'; }
+			if (!empty($row['invoice'])) { $html .= '<div>'.msmInvoicePlanDetails($row).'</div>'; }
 			if ($row['quantity'] == 1 && $row['unit'] === 'd') { $html .= '<div>'.msmText('MSMOneDay', dol_print_date($row['end'], 'day')).'</div>'; }
 			foreach ($row['overlaps'] as $overlap) { $html .= '<div>#'.((int) $overlap['id']).' '.dol_escape_htmltag($overlap['start'].' – '.$overlap['end']).'</div>'; }
 			if (!$row['errors']) { $counts['success']++; $sum += $row['amount']; }

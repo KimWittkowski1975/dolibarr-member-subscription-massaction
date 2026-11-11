@@ -214,13 +214,28 @@ $otherDb->lockFail = false; $otherService->reader->row['errors'] = array('Subscr
 verify($otherService->book(1, $row, $options, $user, false)['status'] === 'skipped', 'subsequent contender checks duplicate again');
 // Render production confirmation/results using hostile synthetic labels.
 $conf->global->MAIN_MAX_DECIMALS_UNIT = 2; $conf->global->MAIN_MAX_DECIMALS_TOT = 2; $conf->global->MAIN_MAX_DECIMALS_SHOWN = 2;
+$renderLangs = $langs;
+$langs = new class {
+	public function transnoentities($key, ...$values) { return $key.($values ? ':'.implode('|', $values) : ''); }
+	public function transnoentitiesnoconv($key, ...$values) { return $this->transnoentities($key, ...$values); }
+	public function trans($key, ...$values) { return $this->transnoentities($key, ...$values); }
+};
 $display = array_merge($row, array('member' => '<script>alert(1)</script>', 'type' => '<type>', 'quantity' => 1, 'unit' => 'd', 'notices' => array(), 'warnings' => array(), 'thirdparty' => '', 'status' => 'ready'));
-$ui = array('phase' => 'confirm', 'revision' => 1, 'ids' => array(1), 'options' => $options, 'rows' => array(1 => $display), 'common' => '');
+$display['invoice'] = array('date' => '2026-11-10', 'vat' => 19, 'product' => 7, 'term' => 3, 'term_label' => 'RECEP - <Immediate & safe>',
+	'number_model' => 'mod_<unsafe>', 'pdf_model' => 'pdf_&unsafe', 'create_customer' => true,
+	'product_snapshot' => array('ref' => 'P-<7>', 'label' => 'Service & support'), 'settings' => array('THIRDPARTY_DEFAULT_CREATE_CONTACT' => '1'));
+$uiOptions = array_merge($options, array('invoice' => true, 'autocreate' => true));
+$ui = array('phase' => 'confirm', 'revision' => 1, 'ids' => array(1), 'options' => $uiOptions, 'rows' => array(1 => $display), 'common' => '');
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '<script>') === false && strpos($html, 'value="book"') !== false && strpos($html, 'MSMOneDay') !== false, 'confirmation escaping booking control and one-day notice');
 verify(strpos($html, 'id="msm-confirm-form"') !== false && strpos($html, 'id="msm-final-submit"') !== false && strpos($html, 'id="msm-submit-status"') !== false, 'final-submit loader hooks rendered');
+verify(strpos($html, 'P-&lt;7&gt; - Service &amp; support') !== false && strpos($html, 'RECEP - &lt;Immediate &amp; safe&gt;') !== false
+	&& strpos($html, 'mod_&lt;unsafe&gt;') !== false && strpos($html, 'pdf_&amp;unsafe') !== false, 'confirmation renders escaped server-confirmed invoice profile');
+verify(strpos($html, 'MSMThirdPartyContactMayBeCreated') !== false, 'confirmation warns about configured contact creation');
 $html = msmRenderPreview($ui, str_repeat('a', 32));
 verify(strpos($html, 'name="sendmail"') < strpos($html, 'name="invoice"') && strpos($html, 'name="invoice"') < strpos($html, 'name="autocreate"'), 'required option order');
+verify(strpos($html, 'P-&lt;7&gt; - Service &amp; support') !== false && strpos($html, 'RECEP - &lt;Immediate &amp; safe&gt;') !== false, 'preview renders escaped server-confirmed invoice profile');
+verify(strpos($html, 'MSMThirdPartyContactMayBeCreated') !== false, 'preview warns about configured contact creation');
 $conf->file = (object) array('dol_document_root' => array('main' => DOL_DOCUMENT_ROOT));
 $ui['phase'] = 'done'; $ui['results'] = array(1 => array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'failed'));
 $html = msmRenderBooking($ui, str_repeat('a', 32));
@@ -248,4 +263,5 @@ verify(strpos($html, 'Synthetic Synthetic #1') !== false, 'UI repeated name part
 $ui['phase'] = 'done'; $ui['results'][1] = array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'not_selected');
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '/adherents/subscription.php?rowid=1') !== false && strpos($html, ' #9</a>') !== false, 'UI member subscription link and contribution ID retained');
+$langs = $renderLangs;
 echo ($passed - $baseline)." booking/mail assertions passed (synthetic transactions and transports only).\n";

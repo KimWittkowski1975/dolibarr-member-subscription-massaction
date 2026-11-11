@@ -61,7 +61,15 @@ class MsmInvoicePdfService
 		$root = $root !== '' ? realpath($root) : false;
 		$ref = dol_sanitizeFileName((string) $identity['ref']);
 		if ($root === false || $ref === '' || $ref === '.' || $ref === '..') { throw new RuntimeException('MSMPdfUnsafePath'); }
-		return array($root, $root.'/'.$ref.'/'.$ref.'.pdf', $ref.'.pdf');
+		$directory = $root.'/'.$ref;
+		if (is_link($directory)) { throw new RuntimeException('MSMPdfUnsafePath'); }
+		if (is_dir($directory)) {
+			$resolvedDirectory = realpath($directory);
+			if ($resolvedDirectory === false || $resolvedDirectory !== $directory || strpos($resolvedDirectory, $root.'/') !== 0) {
+				throw new RuntimeException('MSMPdfUnsafePath');
+			}
+		}
+		return array($root, $directory.'/'.$ref.'.pdf', $ref.'.pdf');
 	}
 
 	protected function verifyFile(array $identity, $invoice, array $descriptor = null)

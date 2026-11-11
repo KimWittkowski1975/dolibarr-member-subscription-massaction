@@ -18,7 +18,7 @@ class MsmInvoiceService
 	protected function customer() { require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php'; return new Societe($this->db); }
 	public function lock($id)
 	{
-		foreach (array('societe', 'societe_extrafields', 'socpeople', 'socpeople_extrafields', 'societe_commerciaux', 'facture', 'facture_extrafields', 'facturedet', 'facturedet_extrafields', 'element_element') as $table) {
+		foreach (array('societe', 'societe_extrafields', 'socpeople', 'socpeople_extrafields', 'societe_commerciaux', 'facture', 'facture_extrafields', 'facturedet', 'facturedet_extrafields', 'element_element', 'ecm_files') as $table) {
 			$row = $this->one("SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '".$this->db->escape($this->db->prefix().$table)."'");
 			if (!$row || strtoupper($row->engine) !== 'INNODB') { throw new RuntimeException('MSMTransactionUnsupported'); }
 		}
@@ -37,6 +37,11 @@ class MsmInvoiceService
 	{
 		$active = $this->one('SELECT @@in_transaction AS active');
 		if ((int) $this->db->transaction_opened !== 1 || !$active || (int) $active->active !== 1) { throw new RuntimeException('MSMTransactionUnknown'); }
+	}
+	/** Encode confirmed plain text once for the HTML-capable Core invoice-line field. */
+	protected function invoiceDescription($description)
+	{
+		return dol_escape_htmltag($description, 1, 1, '', 1);
 	}
 	public function create($member, $subscription, array $row, $actor, array &$diagnostic)
 	{
@@ -69,7 +74,7 @@ class MsmInvoiceService
 		$id = $invoice->create($actor); $diagnostic['invoice_id'] = max(0, (int) $id); $this->owned();
 		if ($id <= 0) { throw new RuntimeException('MSMInvoiceFailed'); }
 		$diagnostic['stage'] = 'invoice_line';
-		$line = $invoice->addline($row['description'], 0, $plan['quantity'], $plan['vat'], 0, 0, $plan['product'], 0, $row['start'], '', 0, 0, 0, $plan['price_base'], $row['amount'], $plan['type']);
+		$line = $invoice->addline($this->invoiceDescription($row['description']), 0, $plan['quantity'], $plan['vat'], 0, 0, $plan['product'], 0, $row['start'], '', 0, 0, 0, $plan['price_base'], $row['amount'], $plan['type']);
 		$this->owned(); if ($line <= 0) { throw new RuntimeException('MSMInvoiceFailed'); }
 		$diagnostic['stage'] = 'invoice_validate';
 		$validated = $invoice->validate($actor); $this->owned();
@@ -96,7 +101,7 @@ class MsmInvoiceService
 			|| (int) $invoice->fk_mode_reglement !== $p['payment_mode'] || (int) $invoice->fk_account !== $p['bank']
 			|| (string) $invoice->multicurrency_code !== $p['currency']
 			|| !$line || (int) $line->n !== 1 || (float) $line->qty !== (float) $p['quantity'] || abs((float) $line->total - $row['amount']) > 0.00000001
-			|| (string) $line->description !== $row['description'] || (int) $line->product !== (int) $p['product']
+			|| (string) $line->description !== $this->invoiceDescription($row['description']) || (int) $line->product !== (int) $p['product']
 			|| (int) $line->product_type !== (int) $p['type'] || abs((float) $line->vat - (float) $p['vat']) > 0.00000001
 			|| (string) $line->date_start !== $this->db->idate($row['start'])
 			|| !$link || (int) $link->n !== 1 || !$party || !in_array((int) $party->client, array(1, 3), true)) { throw new RuntimeException('MSMConsistencyError'); }

@@ -50,6 +50,25 @@ function pdfCleanup($root)
 	if (is_dir($dir)) { rmdir($dir); }
 	if (is_dir($root)) { rmdir($root); }
 }
+function pdfSymlinkDirectoryCase($outside, $attachment)
+{
+	list($root, $pdf, $identity) = pdfFixture();
+	$target = $outside ? sys_get_temp_dir().'/msm-pdf-target-'.bin2hex(random_bytes(8)) : $root.'/target';
+	mkdir($target, 0700);
+	$targetFile = $target.'/INV-SYNTHETIC.pdf';
+	file_put_contents($targetFile, "%PDF-1.4\nsymlink-target\n");
+	symlink($target, $root.'/INV-SYNTHETIC');
+	if ($attachment) {
+		$pdf->object->last_main_doc = 'facture/INV-SYNTHETIC/INV-SYNTHETIC.pdf';
+		$stat = stat($targetFile);
+		$descriptor = array('status' => 'verified', 'message' => 'MSMPdfVerified', 'name' => 'INV-SYNTHETIC.pdf',
+			'size' => $stat['size'], 'mtime' => $stat['mtime'], 'sha256' => hash_file('sha256', $targetFile));
+		fails(static function () use ($pdf, $identity, $descriptor) { $pdf->attachment($identity, $descriptor, new PreviewUser()); }, 'MSMPdfUnsafePath');
+	} else {
+		verify($pdf->generate($identity, new PreviewUser())['message'] === 'MSMPdfUnsafePath', 'symlink invoice directory blocks generation '.($outside ? 'outside' : 'inside').' root');
+	}
+	unlink($root.'/INV-SYNTHETIC'); unlink($targetFile); rmdir($target); rmdir($root);
+}
 $user = new PreviewUser();
 list($root, $pdf, $identity) = pdfFixture();
 $verified = $pdf->generate($identity, $user);
@@ -73,4 +92,8 @@ list($root, $pdf, $identity) = pdfFixture(); $pdf->object->entity = 2;
 verify($pdf->generate($identity, $user)['message'] === 'NotEnoughPermissions', 'wrong invoice entity rejected'); pdfCleanup($root);
 list($root, $pdf, $identity) = pdfFixture(); $identity['pdf_model'] = '../unsafe';
 verify($pdf->generate($identity, $user)['message'] === 'MSMPdfGenerationFailed', 'unsafe model rejected'); pdfCleanup($root);
+foreach (array(false, true) as $outside) {
+	pdfSymlinkDirectoryCase($outside, false);
+	pdfSymlinkDirectoryCase($outside, true);
+}
 echo ($passed - $pdfBaseline)." invoice PDF assertions passed (isolated temporary files; no Dolibarr documents).\n";
