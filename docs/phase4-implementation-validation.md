@@ -1,10 +1,25 @@
 # Phase 4 implementation validation
 
+## Current gate status — 2026-11-11
+
+| Gate | Independently reviewed status | Scope / next step |
+| --- | --- | --- |
+| G2 | **FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS** | Completed for the bounded Dolibarr V22.0.5 profile below |
+| G3 | **APPROVED – PASS WITH DOCUMENTED LIMITATIONS** | Completed for the controlled V22 PDF/mail profile below; SMTP status uncertainty retained |
+| G4 | **PENDING** | Next acceptance step: browser/UX and owner acceptance |
+| V24 | **NOT QUALIFIED** | Source comparison only; separate runtime qualification required |
+| Production | **NOT QUALIFIED** | No release or production approval |
+
+The accepted implementation baseline is `efb59b071a51373bf7e208de4043b1291beb7ad5`.
+PR #4 remains draft. The sections below retain historical development/test evidence;
+the current gate table and the G2/G3 closure sections supersede earlier pending-gate
+statements only within their expressly tested scopes.
+
 ## Scope and provenance
 
 Phase 4B–4E implements the optional invoice workflow designed in Phase 4A. The implementation is based on module commit `c58231101b7fb8be20d0051575ab87011da5bcf1` and the inspected Dolibarr V22.0.5 Core commit `88ad132763be45e9620128c1830e41493e1cdd05`. Dolibarr V24.0.0 commit `769c7db907099643558e77d7002c109cfda919e5` remains a source comparison only.
 
-The original Phase 4 implementation commit was `07e662231907c4d3344883fe51e321939ec6823c`. The review-correction implementation commit tested below is `c74e7a6ae5b41acd18012fe9f1f512196e859e55`. The four original local milestone commits are:
+The original Phase 4 implementation commit was `07e662231907c4d3344883fe51e321939ec6823c`. The historical review-correction implementation commit tested in the original automated table below is `c74e7a6ae5b41acd18012fe9f1f512196e859e55`. The four original local milestone commits are:
 
 | Phase | Commit | Result |
 | --- | --- | --- |
@@ -13,7 +28,7 @@ The original Phase 4 implementation commit was `07e662231907c4d3344883fe51e32193
 | 4D | `9e1d3d0` | Post-commit invoice PDF and mail attachment handling |
 | 4E | `07e6622` | Preview, results, loading indicator and complete flow integration |
 
-No Core file, database, configured Dolibarr document directory, module activation, installation symlink, SMTP configuration or existing test fixture was changed. At the original local completion stage, no push, pull request, merge or tag had been created. The branch was subsequently published as draft PR #4; later review corrections are recorded below.
+During the original local implementation stage, no Core file, database, configured Dolibarr document directory, module activation, installation symlink, SMTP configuration or existing test fixture was changed. At the original local completion stage, no push, pull request, merge or tag had been created. The branch was subsequently published as draft PR #4; later review corrections are recorded below.
 
 ## 4B — preflight and confirmed state
 
@@ -57,7 +72,7 @@ The result page separates contribution, customer, invoice, PDF, mail, known roll
 
 The module JavaScript acts only on the final confirmation form. It sets the action before disabling the submit control, prevents duplicate submits, announces progress, moves focus to the status element and resets the state on `pageshow`, including browser back-forward cache restoration. Server-side form processing remains functional without JavaScript.
 
-## Automated validation
+## Historical automated validation
 
 The following commands were executed on review-correction implementation commit `c74e7a6ae5b41acd18012fe9f1f512196e859e55`, using PHP 8.2.35, Node.js 18.20.4 and the pinned local V22.0.5 source tree. Counts from runners that include another runner are reported separately and are not added as unique assertions.
 
@@ -77,21 +92,20 @@ The following commands were executed on review-correction implementation commit 
 
 The GitHub workflow includes the focused Phase 4 runners in its PHP 7.4 and PHP 8.2 matrix. The published correction HEAD d817bc44a5e68008a7163db8cb45ab972aa6e9f6 passed both PHP 7.4 and PHP 8.2 GitHub CI checks. The table above retains that historical local test baseline. PHP 7.4 was not installed locally, and no package was installed for this task.
 
-## Tests not executed
+## Remaining runtime qualification
 
-All of the following remain **NOT EXECUTED – REQUIRES SEPARATE AUTHORIZATION**:
+G2 and G3 are completed and independently approved for the bounded V22.0.5 profiles
+below. Real SMTP delivery and owner mailbox/attachment checks have been executed.
+The following remain **NOT EXECUTED / NOT QUALIFIED**:
+- complete Chrome/Firefox UX, keyboard, focus, responsive and BFCache acceptance;
+- real connection loss, uncertain physical COMMIT acknowledgement and external writers;
+- arbitrary installed third-party hooks, Multicompany and unsupported tax/stock profiles;
+- V24 runtime/schema qualification and production acceptance.
 
-- real combined contribution, optional customer and invoice creation against a Dolibarr database;
-- real invoice validation, number allocation, Core triggers, stored links, rollback failures, R16 and payment/bank absence reconciliation;
-- real Core PDF generation, invoice-document metadata and document-root behavior;
-- real SMTP delivery, mailbox receipt and invoice attachment inspection;
-- authenticated browser acceptance in Chrome and Firefox, including no-JavaScript, keyboard, focus, responsive and BFCache behavior;
-- real concurrency, external Core writers, connection loss and uncertain physical commit acknowledgement;
-- real Multicompany and arbitrary installed third-party hook profiles;
-- Dolibarr V24 runtime and schema qualification;
-Independent overall code review and the first follow-up review have occurred: F4-02–F4-06 were closed; F4-01/F4-07 remained partial, with N4-01/N4-02 requiring the targeted corrections below. Final targeted follow-up review remains pending.
-
-No claim of runtime integration or production readiness follows from the synthetic tests.
+Independent overall and targeted follow-up reviews have occurred. The owner reports
+**G2 FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS** and
+**G3 APPROVED – PASS WITH DOCUMENTED LIMITATIONS**. This acceptance does
+not extend beyond the tested V22 profile or constitute production approval.
 
 ## Manual reconciliation for an unknown outcome
 
@@ -101,10 +115,11 @@ The absence of one row, ID, relation or file is insufficient evidence that all e
 
 ## Residual risk and next gates
 
-The implementation contains guards for R04–R09, R16 and P4-01–P4-05, but their invoice-specific acceptance requires real evidence. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. The engine list is deliberately bounded to tables reached by the inspected V22 paths; installed hooks or triggers may touch additional nontransactional tables. Directory and file checks reduce symlink exposure but cannot eliminate a privileged filesystem actor racing between verification and Core generation or transport. Unsupported profiles are rejected rather than silently approximated, but the permitted real profile still needs qualification.
+The implementation contains guards for R04–R09, R16 and P4-01–P4-05. The bounded G2/G3 evidence and accepted limitations below qualify only the stated V22 profiles. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. The engine list is deliberately bounded to tables reached by the inspected V22 paths; installed hooks or triggers may touch additional nontransactional tables. Directory and file checks reduce symlink exposure but cannot eliminate a privileged filesystem actor racing between verification and Core generation or transport. Unsupported profiles are rejected rather than silently approximated. G2/G3 qualify the bounded database/PDF/mail profiles below; broader profiles need separate evidence.
 
-The next gate is a final targeted follow-up review of the remaining corrections and CI on the published HEAD. Bounded real V22 integration, authenticated browser and document/mail validation then require separate authorization and a current backup. V24 requires its own compatible installation and evidence. Production or general-use approval is a separate decision.
+The G2/G3 independent reviews and the implementation PHP matrix are complete. G4 browser/UX and owner acceptance are the next open gate. V24 requires its own compatible installation and evidence. Production or general-use approval is a separate decision.
 
+Historical implementation-stage conclusion (superseded by the current gate overview):
 **PHASE 4 IMPLEMENTATION COMPLETE – SYNTHETICALLY VALIDATED – READY FOR INDEPENDENT REVIEW**
 
 ## Targeted follow-up completion — 2026-11-11
@@ -115,4 +130,127 @@ Implementation `559db935334be8407432c4d04b599419997cd8b6` now uses `htmlspecialc
 
 Targeted local PHP 8.2 validation: invoice runner PASS (388 included preview, 87 included booking/mail, 55 invoice assertions); post-commit runner PASS (same included suites, 13 post-commit assertions); standalone contracts/language parity PASS (87); mail adapter PASS (17); synthetic JavaScript PASS (6). Lint of all three changed PHP files and whitespace checks PASS. These results supersede only the affected counts above. The requirement matrix retains 71 IDs, 18 columns and the first ten historical columns, with literal link/zero-invoice/post-commit assertion references corrected. Final published-HEAD CI is recorded in PR #4.
 
-Real V22 invoice/rollback, Core PDF, SMTP and browser integration remain **NOT EXECUTED**. The final targeted independent review remains pending; no runtime or production approval is implied.
+At that historical correction stage, real invoice/rollback, Core PDF, SMTP and browser integration had not been executed. The subsequent G2/G3 evidence below supersedes only the completed V22 portions.
+
+## G2 closure — 2026-11-11
+
+**G2 FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS** applies only to
+Dolibarr V22.0.5 Core `88ad132763be45e9620128c1830e41493e1cdd05`, PHP 8.2.35,
+MariaDB 10.11/InnoDB, entity 1, EUR, quantity-one standard invoices, zero membership
+VAT, no contribution product or local taxes, Mercure numbering and Sponge PDF.
+The real run used module `431c25a` plus the local V22 renderer fix, subsequently
+published in `efb59b071a51373bf7e208de4043b1291beb7ad5`. Its real V22 translation
+regressions and full GitHub PHP 7.4/8.2 matrix passed (push workflow 43098579042).
+No real runtime qualification of PHP 7.4 is implied by that synthetic CI matrix.
+
+| Case | Actual result and provenance |
+| --- | --- |
+| G2-01 | PASS: real HTTP contribution and validated 120 EUR invoice with existing customer and verified own PDF |
+| G2-02 | PASS: real HTTP zero contribution and validated zero invoice with verified own PDF |
+| G2-03 | PASS: real CLI monthly 15 EUR contribution, explicitly created customer, validated invoice and verified PDF |
+| G2-04 | PASS: controlled exception after real invoice validation; confirmed rollback; all 20 original table hashes before/after equal, including Agenda/resources/extrafields and events |
+| G2-05 | PASS: one owner-executed real CLI batch retained the successful row and rolled back the failed row; not a browser/HTTP mixed-batch acceptance |
+| G2-06 | PASS within scope: authenticated role boundaries and rejected repeated consumed confirmation POSTs; unchanged observed DB/document metadata and PDF contents |
+| G2-07 | PASS within scope: stored contribution/invoice values, exact Core links, customer links, R16 latest-start rule, canonical PDF/ECM identity and unchanged payment/bank records reconciled |
+
+Exactly three successful contributions/invoices were created, with one controlled
+rollback attempt. No G2 SMTP mail was selected. Existing target-member fields were
+checked; separate baseline differences found to predate the G2 run were explicitly
+excluded from attribution to G2. No automatic repair, deletion, retry or restore ran.
+Twelve real HTTP preview variants covered English/German, linked/unlinked members,
+mixed selections and invoice on/off after the renderer correction.
+
+The owner supplied an administrative database-trigger count of zero and explicitly
+accepted the isolated installation's backup/restore risk. No additional grants or
+restore test were required. Enabled Core Agenda automation was retained and included
+in the database/rollback checks.
+
+Limits retained from the accepted independent follow-up:
+
+- The active CLI executable was not separately retained. Its previously recorded
+  hash, owner output and original results are available; the disabled archive differs
+  only by its post-run execution guard. Reversing that guard solely in memory matches
+  the recorded hash. Derived bytes are not presented as an original execution artifact.
+- The later read-only invoice-tree inspection found no rollback-attributable remnants
+  and consistent ECM metadata; it does not establish absence of transient or external
+  filesystem effects. Three original success-PDF hashes match; an older specimen was
+  separately identified.
+- Replay showed rejection plus unchanged DB/ECM and PDF contents. HTTP did not expose
+  an independent file-mtime observation; no universal no-regeneration guarantee follows.
+
+Sanitized original evidence remains in the protected local test evidence area.
+Credentials, mailbox details, private records, raw dumps and deployment paths are
+excluded from this repository. No G2 business transaction is to be repeated for G3.
+
+## G3 controlled execution — 2026-11-11
+
+The owner separately authorized bounded V22 business writes, PDF generation and
+mail delivery only to a controlled recipient, and accepted the new G3 backup/restore
+risk without additional archive checks. The approved plan reuses G2 for invoice-on /
+mail-off and limits new business operations to two: invoice+mail and contribution-only
+mail, using unused periods. No third business operation is required for negative tests.
+
+The first real HTTP operation committed one contribution and validated invoice, then
+produced its own canonical Sponge PDF with matching invoice link and ECM metadata.
+R16 and expected member-field changes were reconciled; unrelated recorded rows and
+payment/bank data were unchanged. The expected transport-success result was not
+confirmed by the runner. Processing stopped before the second business operation,
+with no rebooking or resend. A sanitized log review for the attempt window contains
+both a Core SMTP success marker and a later mail-error marker. At that initial stop,
+mailbox receipt, attachment identity, template rendering and
+the exact delivery classification remained pending; those markers alone were not
+a complete delivery proof. The subsequent owner evidence is recorded below.
+
+Existing isolated tests passed for PDF identity/path/signature/metadata protection,
+missing/changed PDF blocking before hooks/transport, post-commit business-success
+retention, hook takeover/failure, transport failure, unknown outcomes, disabled mail
+and denied permissions. Five focused additional invoice-mail adapter assertions
+passed outside the repository. These are T2 synthetic evidence, not live SMTP failure
+injection or mailbox evidence. No production mail-code change was required.
+
+The owner subsequently confirmed receipt of the first message with exactly one PDF
+whose SHA-256 matches the generated own-invoice PDF. A further sanitized log review
+reported Core SMTP applicative error 121 (server response could not be read), alongside
+the success marker. The exact SMTP phase is not established. The module was not
+changed to suppress this Core error, and the first message was never resent.
+
+After the owner confirmed receipt of the first message, the independent second case
+created one contribution-only booking and reported standard transport acceptance.
+It created no invoice, PDF, ECM entry or invoice link. Its identical consumed POST
+was rejected without DB changes. Exactly two G3 business operations occurred.
+Existing target-member changes were limited to end-date/timestamp fields; recorded
+unrelated rows and payment/bank data were unchanged.
+
+| Case | Current evidence |
+| --- | --- |
+| G3-01 | PASS within scope: real invoice/PDF and owner-confirmed English receipt, correct substitutions, exactly one own PDF with matching name/hash; Core diagnostic retained below |
+| G3-02 | PASS: real contribution-only transport accepted, owner confirmed English receipt/correct member with no attachment; no new invoice/PDF/ECM effects |
+| G3-03 | PASS: accepted G2 invoice-on/mail-off evidence reused without another booking |
+| G3-04 | PASS at T2 scope: isolated missing/changed PDF blocks delivery and confirmed business success survives post-commit errors |
+| G3-05 | PASS at T2 negative-contract scope; real first-action Core diagnostic despite confirmed receipt documented separately |
+| G3-06 | PASS within scope: denied restricted sessions and consumed-post replay for G3-02; first-case replay intentionally not executed after uncertain initial result |
+| G3-07 | PASS within scope: stored objects/R16/links/ECM/payment/bank reconciliation and owner mailbox/hash review complete |
+
+Independent acceptance: **G3 APPROVED – PASS WITH DOCUMENTED LIMITATIONS** for the tested V22 profile. Additional real sends or bookings are unnecessary.
+The received MIME headers have not been independently inspected; the module/HTTP
+PDF MIME is application/pdf and the owner confirmed the received attachment bytes.
+G4 browser/UX remains a separate gate. No production/Core code change, configuration
+change, Git publication, automatic resend or restore was performed.
+
+The owner completed both mailbox checks: English subjects and member-name
+substitutions are resolved, the invoice mail has exactly its expected own PDF with
+the matching SHA-256, and the contribution-only mail has no attachment. This is
+owner-observed mailbox evidence, not an agent-connected mailbox or raw MIME audit.
+The first-send Core error 121 remains a technical uncertainty in the reported send
+status, while actual mailbox receipt is confirmed by the owner. It is not evidence
+of failed delivery; no silent conversion of failed/unknown Core results into sent is
+implemented. A separate mailbox duplicate-count audit was not supplied; observed
+replay rejection, unchanged database state and Core controller flow are the stated
+no-resend evidence. No additional business operation was executed to improve counts.
+
+### Owner scope decision: template configuration
+
+G3-W02 concerns Dolibarr template configuration only and is not a module defect,
+validation failure, development task or G4 blocker. It is excluded from further
+module-development work. No template or implementation change is requested or made
+under this decision; the historical technical delivery evidence remains unchanged.
