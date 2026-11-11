@@ -41,7 +41,7 @@ class MsmInvoiceService
 	/** Encode confirmed plain text once for the HTML-capable Core invoice-line field. */
 	protected function invoiceDescription($description)
 	{
-		return dol_escape_htmltag($description, 1, 1, '', 1);
+		return htmlspecialchars($description, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', true);
 	}
 	public function create($member, $subscription, array $row, $actor, array &$diagnostic)
 	{

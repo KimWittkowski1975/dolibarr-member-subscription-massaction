@@ -265,9 +265,13 @@ foreach (array(array(true, true, true, false), array(false, true, true, true), a
 	verify(isset($m[0]) && (strpos($m[0], ' disabled') === false) === $enabledOption
 		&& (strpos($m[0], ' checked') !== false) === $enabledOption, 'OPT-09 renderer dependency matrix');
 }
+$previousGlobals = clone $conf->global; $previousDenied = $user->denied;
+$conf->global->MAIN_USE_ADVANCED_PERMS = 1;
 $state['options']['invoice'] = true; $state['options']['sendmail'] = true; $user->denied = array('facture.invoice_advance.send');
 $html = msmRenderPreview($state, str_repeat('a', 32));
 preg_match('/<input[^>]*name="invoice"[^>]*>/', $html, $m);
 verify(isset($m[0]) && strpos($m[0], ' disabled') === false, 'invoice renderer availability independent from selected mail');
-$conf->modules['societe'] = 1; $user->denied = array();
+verify(!MsmPreviewService::canCreateSubscriptionWithOptions($user, true, true), 'advanced permission denies combined invoice mail while invoice control remains available');
+$conf->global = $previousGlobals; $user->denied = $previousDenied;
+$conf->modules['societe'] = 1;
 echo $passed." assertions passed (V22 calendar APIs, synthetic business data; no database connection).\n";

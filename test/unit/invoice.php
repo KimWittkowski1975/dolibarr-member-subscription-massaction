@@ -110,13 +110,23 @@ foreach (array('success', 'customer', 'commit') as $mode) {
 }
 list($db, $service, $row) = invoiceBookingFixture(); $row['amount'] = 0; $service->reader->row = $row; $opts['autocreate'] = false;
 verify($service->book(1, $row, $opts, $user, false)['status'] === 'success', 'zero gross invoice allowed');
-list($db, $service, $row) = invoiceBookingFixture();
-$description = 'Fee & <b>HTML-like</b> "quoted" \'single\' Ä {Unknown} &amp;';
-$row['description'] = $description; $service->reader->row = $row; $opts['description'] = $description;
-verify($service->book(1, $row, $opts, $user, false)['status'] === 'success', 'invoice description special characters booked');
-$encoded = dol_escape_htmltag($description, 1, 1, '', 1);
-verify($db->invoiceLine->description === $encoded && strpos($db->invoiceLine->description, '&amp;amp;') === false, 'invoice description encoded exactly once at adapter boundary');
-verify($db->saved->note === $description && strpos($db->invoiceLine->description, 'Ä') !== false && strpos($db->invoiceLine->description, '{Unknown}') !== false, 'contribution description stays plain and Unicode placeholders survive');
+// Independent literal expectations: one HTML rendering must reproduce confirmed plain text.
+$descriptions = array(
+	array('Fee &amp;', 'Fee &amp;amp;'),
+	array('5 &lt; 6', '5 &amp;lt; 6'),
+	array('&#60;script&#62;', '&amp;#60;script&amp;#62;'),
+	array('<b>Text</b>', '&lt;b&gt;Text&lt;/b&gt;'),
+	array('Fee & < > "quoted" \'single\' Ä ü € {Unknown}', 'Fee &amp; &lt; &gt; &quot;quoted&quot; &#039;single&#039; Ä ü € {Unknown}')
+);
+foreach ($descriptions as $case) {
+	list($db, $service, $row) = invoiceBookingFixture();
+	$description = $case[0];
+	$row['description'] = $description; $service->reader->row = $row; $opts['description'] = $description;
+	verify($service->book(1, $row, $opts, $user, false)['status'] === 'success', 'invoice description special characters booked');
+	verify($db->invoiceLine->description === $case[1], 'invoice description literal HTML persistence value');
+	verify(htmlspecialchars_decode($db->invoiceLine->description, ENT_QUOTES) === $description, 'invoice description renders original confirmed plain text');
+	verify($db->saved->note === $description, 'contribution description remains confirmed plain text');
+}
 list($db, $service, $row) = invoiceBookingFixture(); $db->nonTransactionalTable = 'ecm_files';
 $blocked = $service->book(1, $row, $opts, $user, false);
 verify($blocked['status'] === 'failed' && $blocked['message'] === 'MSMTransactionUnsupported' && !$db->calls && !in_array('subscription', $db->events, true), 'nontransactional ecm_files rejected before writes');
