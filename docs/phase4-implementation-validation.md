@@ -13,7 +13,7 @@ The original Phase 4 implementation commit was `07e662231907c4d3344883fe51e32193
 | 4D | `9e1d3d0` | Post-commit invoice PDF and mail attachment handling |
 | 4E | `07e6622` | Preview, results, loading indicator and complete flow integration |
 
-No Core file, database, configured Dolibarr document directory, module activation, installation symlink, SMTP configuration or existing test fixture was changed. No push, pull request, merge or tag was created.
+No Core file, database, configured Dolibarr document directory, module activation, installation symlink, SMTP configuration or existing test fixture was changed. At the original local completion stage, no push, pull request, merge or tag had been created. The branch was subsequently published as draft PR #4; later review corrections are recorded below.
 
 ## 4B — preflight and confirmed state
 
@@ -75,7 +75,7 @@ The following commands were executed on review-correction implementation commit 
 | `git diff --check` | PASS |
 | Requirements CSV integrity | PASS — 71 unique IDs, 18 columns, original first ten columns preserved |
 
-The GitHub workflow includes the focused Phase 4 runners in its PHP 7.4 and PHP 8.2 matrix. That remote CI workflow has not been executed for this local branch. PHP 7.4 was not installed locally, and no package was installed for this task.
+The GitHub workflow includes the focused Phase 4 runners in its PHP 7.4 and PHP 8.2 matrix. The published correction HEAD d817bc44a5e68008a7163db8cb45ab972aa6e9f6 passed both PHP 7.4 and PHP 8.2 GitHub CI checks. The table above retains that historical local test baseline. PHP 7.4 was not installed locally, and no package was installed for this task.
 
 ## Tests not executed
 
@@ -89,7 +89,7 @@ All of the following remain **NOT EXECUTED – REQUIRES SEPARATE AUTHORIZATION**
 - real concurrency, external Core writers, connection loss and uncertain physical commit acknowledgement;
 - real Multicompany and arbitrary installed third-party hook profiles;
 - Dolibarr V24 runtime and schema qualification;
-- independent code and architecture review.
+Independent overall code review and the first follow-up review have occurred: F4-02–F4-06 were closed; F4-01/F4-07 remained partial, with N4-01/N4-02 requiring the targeted corrections below. Final targeted follow-up review remains pending.
 
 No claim of runtime integration or production readiness follows from the synthetic tests.
 
@@ -103,6 +103,16 @@ The absence of one row, ID, relation or file is insufficient evidence that all e
 
 The implementation contains guards for R04–R09, R16 and P4-01–P4-05, but their invoice-specific acceptance requires real evidence. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. The engine list is deliberately bounded to tables reached by the inspected V22 paths; installed hooks or triggers may touch additional nontransactional tables. Directory and file checks reduce symlink exposure but cannot eliminate a privileged filesystem actor racing between verification and Core generation or transport. Unsupported profiles are rejected rather than silently approximated, but the permitted real profile still needs qualification.
 
-The next steps are an independent review, explicit authorization and a current backup for bounded V22 integration tests, authenticated browser and document/mail validation, then GitHub CI on the exact reviewed commit. V24 requires its own compatible installation and evidence. Production or general-use approval is a separate decision.
+The next gate is a final targeted follow-up review of the remaining corrections and CI on the published HEAD. Bounded real V22 integration, authenticated browser and document/mail validation then require separate authorization and a current backup. V24 requires its own compatible installation and evidence. Production or general-use approval is a separate decision.
 
 **PHASE 4 IMPLEMENTATION COMPLETE – SYNTHETICALLY VALIDATED – READY FOR INDEPENDENT REVIEW**
+
+## Targeted follow-up completion — 2026-11-11
+
+The original implementation `07e6622` received an independent overall review. Corrections `c74e7a6` and documentation `d817bc4` passed GitHub CI on PHP 7.4/8.2. The subsequent independent follow-up closed F4-02–F4-06 and identified remaining entity-fidelity/test-evidence issues (F4-01, F4-07, N4-01, N4-02).
+
+Implementation `559db935334be8407432c4d04b599419997cd8b6` now uses `htmlspecialchars(..., ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8', true)` without prior decoding. This matches the inspected V22 `Facture::addline()` contract, which assigns the provided description to the stored line. Literal expected values cover `&amp;`, `&lt;`, numeric entities, actual tags, quotes, Unicode and unknown placeholders. Each case checks the stored value, one HTML decode back to the confirmed text, and the unchanged contribution note. Advanced permissions are explicitly enabled in the renderer regression and the prior synthetic configuration is restored.
+
+Targeted local PHP 8.2 validation: invoice runner PASS (388 included preview, 87 included booking/mail, 55 invoice assertions); post-commit runner PASS (same included suites, 13 post-commit assertions); standalone contracts/language parity PASS (87); mail adapter PASS (17); synthetic JavaScript PASS (6). Lint of all three changed PHP files and whitespace checks PASS. These results supersede only the affected counts above. The requirement matrix retains 71 IDs, 18 columns and the first ten historical columns, with literal link/zero-invoice/post-commit assertion references corrected. Final published-HEAD CI is recorded in PR #4.
+
+Real V22 invoice/rollback, Core PDF, SMTP and browser integration remain **NOT EXECUTED**. The final targeted independent review remains pending; no runtime or production approval is implied.
