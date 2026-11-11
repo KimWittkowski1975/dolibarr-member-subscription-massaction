@@ -4,7 +4,7 @@
 
 Phase 4B–4E implements the optional invoice workflow designed in Phase 4A. The implementation is based on module commit `c58231101b7fb8be20d0051575ab87011da5bcf1` and the inspected Dolibarr V22.0.5 Core commit `88ad132763be45e9620128c1830e41493e1cdd05`. Dolibarr V24.0.0 commit `769c7db907099643558e77d7002c109cfda919e5` remains a source comparison only.
 
-The exact implementation commit tested below is `07e662231907c4d3344883fe51e321939ec6823c`. The four local milestone commits are:
+The original Phase 4 implementation commit was `07e662231907c4d3344883fe51e321939ec6823c`. The review-correction implementation commit tested below is `c74e7a6ae5b41acd18012fe9f1f512196e859e55`. The four original local milestone commits are:
 
 | Phase | Commit | Result |
 | --- | --- | --- |
@@ -39,6 +39,16 @@ Only a bounded descriptor containing invoice identity, reference, file name, siz
 
 `MsmSubscriptionMail` preserves the contribution-only path. For invoice mail it rechecks invoice permissions and requires the verified invoice PDF. Missing or changed output blocks standard delivery. Hook takeover, hook failure, standard send, transport failure and unknown result remain distinct. A PDF or mail failure after commit does not relabel or roll back the successful business objects, and no result GET regenerates or resends anything.
 
+## Review corrections F4-01–F4-07
+
+- **F4-01:** confirmed plain-text descriptions are encoded exactly once at the `Facture::addline()` adapter boundary. Contribution notes retain the confirmed plain text, while stored invoice-line postconditions compare the encoded representation.
+- **F4-02:** invoice availability and its O1 default no longer depend on the selected mail option or advanced send permission. The send permission is required only for the combined invoice-and-mail action.
+- **F4-03:** invoice-PDF identity, descriptor and attachment availability are verified before `sendMail` hooks. A standard transport re-resolves the attachment after a zero hook response; negative and positive hook semantics remain distinct.
+- **F4-04:** the canonical invoice directory is checked in addition to the PDF file. Symlinked invoice directories pointing inside or outside the trusted resolved entity root are rejected during generation and attachment resolution.
+- **F4-05:** preview and confirmation render the server-confirmed product mapping, payment term, number model and PDF model. Explicit customer creation warns when the confirmed Dolibarr setting may also create a contact.
+- **F4-06:** the bounded V22 transaction-engine preflight now includes `ecm_files`, which the V22 invoice reference update path can modify.
+- **F4-07:** the requirement matrix records the O1 deviation and names the concrete regression assertions for the affected critical requirements.
+
 ## 4E — user flow and results
 
 The preview exposes invoice intent, linked or planned customer, invoice amount, date, currency, product, VAT, payment term, number/PDF models and the mandatory PDF attachment relationship when mail is selected. The customer-creation option is available only with invoice selection and the required rights.
@@ -49,18 +59,18 @@ The module JavaScript acts only on the final confirmation form. It sets the acti
 
 ## Automated validation
 
-The following commands were executed on exact implementation commit `07e662231907c4d3344883fe51e321939ec6823c`, using PHP 8.2.35, Node.js 18.20.4 and the pinned local V22.0.5 source tree. Counts from runners that include another runner are reported separately and are not added as unique assertions.
+The following commands were executed on review-correction implementation commit `c74e7a6ae5b41acd18012fe9f1f512196e859e55`, using PHP 8.2.35, Node.js 18.20.4 and the pinned local V22.0.5 source tree. Counts from runners that include another runner are reported separately and are not added as unique assertions.
 
 | Command | Result |
 | --- | --- |
 | `php test/unit/run.php` | PASS — 87 synthetic contract assertions |
 | `node test/unit/loading.js` | PASS — 6 synthetic DOM assertions |
-| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/booking.php` | PASS — 384 preview/calendar assertions and 83 booking/mail assertions |
-| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/maildelivery.php` | PASS — 14 mail-adapter assertions |
-| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/invoiceprofile.php` | PASS — 384 included preview/calendar assertions and 21 profile assertions |
-| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/invoice.php` | PASS — 384 included preview/calendar, 83 included booking/mail and 29 invoice assertions |
-| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/invoicepdf.php` | PASS — 384 included preview/calendar, 83 included booking/mail and 12 isolated PDF assertions |
-| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/postcommit.php` | PASS — 384 included preview/calendar, 83 included booking/mail and 13 checkpoint assertions |
+| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/booking.php` | PASS — 387 preview/calendar assertions and 87 booking/mail assertions |
+| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/maildelivery.php` | PASS — 17 mail-adapter assertions |
+| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/invoiceprofile.php` | PASS — 387 included preview/calendar assertions and 24 profile assertions |
+| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/invoice.php` | PASS — 387 included preview/calendar, 87 included booking/mail and 34 invoice assertions |
+| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/invoicepdf.php` | PASS — 387 included preview/calendar, 87 included booking/mail and 16 isolated PDF assertions |
+| `DOLIBARR_TEST_ROOT=/home/marcel/dolibarr php test/unit/postcommit.php` | PASS — 387 included preview/calendar, 87 included booking/mail and 13 checkpoint assertions |
 | PHP lint over every module PHP file | PASS |
 | `git diff --check` | PASS |
 | Requirements CSV integrity | PASS — 71 unique IDs, 18 columns, original first ten columns preserved |
@@ -91,7 +101,7 @@ The absence of one row, ID, relation or file is insufficient evidence that all e
 
 ## Residual risk and next gates
 
-The implementation contains guards for R04–R09, R16 and P4-01–P4-05, but their invoice-specific acceptance requires real evidence. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. Unsupported profiles are rejected rather than silently approximated, but the permitted real profile still needs qualification.
+The implementation contains guards for R04–R09, R16 and P4-01–P4-05, but their invoice-specific acceptance requires real evidence. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. The engine list is deliberately bounded to tables reached by the inspected V22 paths; installed hooks or triggers may touch additional nontransactional tables. Directory and file checks reduce symlink exposure but cannot eliminate a privileged filesystem actor racing between verification and Core generation or transport. Unsupported profiles are rejected rather than silently approximated, but the permitted real profile still needs qualification.
 
 The next steps are an independent review, explicit authorization and a current backup for bounded V22 integration tests, authenticated browser and document/mail validation, then GitHub CI on the exact reviewed commit. V24 requires its own compatible installation and evidence. Production or general-use approval is a separate decision.
 

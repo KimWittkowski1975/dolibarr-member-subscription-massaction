@@ -34,6 +34,10 @@ includes the existing preview runner once. Former OPT scenarios allowing invoice
 planning are retained as history; current invoice consent has explicit Phase 4 tests.
 Phase 4 references use `invoiceprofile:`, `invoice:`, `invoicepdf:`, `postcommit:` and
 `loading:` for the correspondingly named runners.
+The Phase 4 review-correction references intentionally use literal labels for the
+critical description-encoding, permission, PDF/hook ordering, symlink-directory,
+`ecm_files` and confirmed-profile rendering cases. A generic runner prefix alone is
+not evidence for those boundaries.
 Historical OPT-HTTP evidence is not evidence of the new booking controller.
 Current evidence is separated by provenance (see `docs/phase3b-validation.md`):
 
