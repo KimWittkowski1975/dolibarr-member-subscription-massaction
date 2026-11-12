@@ -71,7 +71,7 @@ function msmRenderPreview(array $state, $key)
 	if (!$invoiceAvailable) { $html .= '<div class="info">'.msmText('MSMInvoiceUnavailable').'</div>'; }
 	if ($state['options']['invoice'] && $state['options']['sendmail']) { $html .= '<div class="info">'.msmText('MSMInvoiceMailPdfRequired').'</div>'; }
 	if (msmInvoiceMayCreateContact($state)) { $html .= '<div class="warning">'.msmText('MSMThirdPartyContactMayBeCreated').'</div>'; }
-	$html .= '<label>'.msmText('SubscriptionBulkDescriptionLabel').' <input class="minwidth300" type="text" name="description" maxlength="1024" value="'.dol_escape_htmltag($state['options']['description']).'"></label>';
+	$html .= '<label style="display:block">'.msmText('SubscriptionBulkDescriptionLabel').' <input class="flat" style="display:block;width:100%;max-width:60rem;box-sizing:border-box" type="text" name="description" maxlength="1024" value="'.dol_escape_htmltag($state['options']['description']).'"></label>';
 	$html .= '<p>'.msmText('SubscriptionBulkDescriptionHelp').'</p></fieldset>';
 	$month = getDolGlobalInt('MEMBER_SUBSCRIPTION_SUGGEST_END_OF_MONTH');
 	$year = getDolGlobalInt('MEMBER_SUBSCRIPTION_SUGGEST_END_OF_YEAR');
