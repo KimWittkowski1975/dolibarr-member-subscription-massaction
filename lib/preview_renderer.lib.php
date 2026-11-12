@@ -80,7 +80,7 @@ function msmRenderPreview(array $state, $key)
 		$html .= '<br><button class="button" name="action" value="calendar">'.msmText('SubscriptionBulkApplyCalendar').'</button></div>';
 	}
 	$html .= '<p>'.msmText('SubscriptionBulkDateHelp').'</p><button class="button" name="action" value="refresh">'.msmText('SubscriptionBulkRefresh').'</button>';
-	$html .= '<div class="div-table-responsive"><table class="noborder centpercent"><thead><tr class="liste_titre">';
+	$html .= '<div class="div-table-responsive" style="width:0;min-width:100%"><table class="noborder centpercent"><thead><tr class="liste_titre">';
 	foreach (array('Member', 'Type', 'Amount', 'DateSubscription', 'DateEndSubscription', 'ThirdParty', 'Status', 'MSMDetails') as $label) { $html .= '<th>'.msmText($label).'</th>'; }
 	$html .= '</tr></thead><tbody>';
 	$warnings = 0; $sum = 0.0;

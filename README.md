@@ -1,9 +1,14 @@
 # Member Subscription Massaction for Dolibarr
 
 **Unreleased Phase 4: optional invoice, post-commit PDF and attached confirmation
-email paths are implemented and synthetically validated against the Dolibarr 22.0.5
-source contracts. Real invoice/PDF/SMTP/browser integration and independent review
-remain pending. Do not use in production.**
+email paths are implemented. G2 is complete for the tested Dolibarr V22.0.5 profile;
+G3 is complete with documented limitations. Automated G4 pre-acceptance has been
+performed; final owner browser/UX acceptance remains pending. V24 is not qualified.
+No production approval.**
+
+See [Phase 4 implementation validation](docs/phase4-implementation-validation.md)
+for the accepted scope, historical evidence and retained limitations. The Phase 3B
+acceptance below is historical and does not replace final Phase 4 acceptance.
 
 Real booking/database integration and authenticated HTTP replay tests have been
 performed; manual browser acceptance passed 9/9. The owner confirmed receipt of the
@@ -16,7 +21,7 @@ the owner's scoped residual-risk acceptance.
 The module adds an authenticated member-list preview, an explicit confirmation and
 per-member booking results. It can optionally create a linked third party, a validated
 standard invoice and its PDF through Dolibarr Core APIs. It never creates payments or
-bank entries. Invoice use remains unqualified until the separate real integration gate.
+bank entries. Invoice qualification is limited to the tested V22.0.5 profile documented above.
 
 ## Origin and scope
 
@@ -65,6 +70,20 @@ availability does not imply a released, installable production module.
 V22 clears `massaction` without `confirmmassaction`. The module uses that existing
 list contract and `doMassActions` before response output; it does not introduce a
 second confirmation form into the core list. It appends an option with return 0.
+
+## Display conditions
+
+Recommended desktop screen resolution: **1440 × 900 pixels or higher**.
+The targeted minimum browser viewport for regular desktop use is **1024 × 768 pixels**, qualified
+by focused headless Chromium/Firefox layout checks on Dolibarr V22.0.5. Final
+visual and owner acceptance remains pending.
+
+These are module-specific conditions, not official Dolibarr minimum requirements.
+The usable browser viewport can be smaller than the screen resolution. Wide member
+tables scroll horizontally within their own table area when space is limited.
+The module does not provide a dedicated smartphone interface. Checks at 768 and
+390 px viewport widths cover layout regression only; unchanged Core layout
+limitations are assessed separately.
 
 ## Security and limitations
 
