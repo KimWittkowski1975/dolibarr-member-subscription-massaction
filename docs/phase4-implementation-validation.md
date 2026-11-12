@@ -64,9 +64,17 @@ Only a bounded descriptor containing invoice identity, reference, file name, siz
 - **F4-06:** the bounded V22 transaction-engine preflight now includes `ecm_files`, which the V22 invoice reference update path can modify.
 - **F4-07:** the requirement matrix records the O1 deviation and names the concrete regression assertions for the affected critical requirements.
 
+### Later owner decision — 2026-11-13 (F4-05 display scope)
+
+The original F4-05 evidence above records the historical display requirement.
+The owner subsequently removed number/PDF model names from preview and confirmation.
+Both models remain unchanged in server-side planning, validation, snapshots and
+booking. Fee, date, VAT, product/service and payment terms remain visible. This is
+a presentation-only revision; the historical technical evidence is retained.
+
 ## 4E — user flow and results
 
-The preview exposes invoice intent, linked or planned customer, invoice amount, date, currency, product, VAT, payment term, number/PDF models and the mandatory PDF attachment relationship when mail is selected. The customer-creation option is available only with invoice selection and the required rights.
+The preview exposes invoice intent, linked or planned customer, invoice amount, date, currency, product, VAT, payment term and the mandatory PDF attachment relationship when mail is selected. The customer-creation option is available only with invoice selection and the required rights.
 
 The result page separates contribution, customer, invoice, PDF, mail, known rollback and unknown transaction outcomes. Customer and invoice links are rendered only after a fresh access check. Unknown outcomes show the diagnostic stage and explicitly unconfirmed IDs; they do not offer a retry action.
 

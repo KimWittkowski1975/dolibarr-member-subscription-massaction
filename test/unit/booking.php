@@ -216,7 +216,7 @@ verify($otherService->book(1, $row, $options, $user, false)['status'] === 'skipp
 $conf->global->MAIN_MAX_DECIMALS_UNIT = 2; $conf->global->MAIN_MAX_DECIMALS_TOT = 2; $conf->global->MAIN_MAX_DECIMALS_SHOWN = 2;
 $renderLangs = $langs;
 $langs = new class {
-	public function transnoentities($key, ...$values) { return $key.($values ? ':'.implode('|', $values) : ''); }
+	public function transnoentities($key, ...$values) { return $key.(in_array($key, array('Yes', 'No'), true) ? ' <&>' : '').($values ? ':'.implode('|', $values) : ''); }
 	public function transnoentitiesnoconv($key, ...$values) { return $this->transnoentities($key, ...$values); }
 	public function trans($key, ...$values) { return $this->transnoentities($key, ...$values); }
 };
@@ -230,15 +230,26 @@ $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '<script>') === false && strpos($html, 'value="book"') !== false && strpos($html, 'MSMOneDay') !== false, 'confirmation escaping booking control and one-day notice');
 verify(strpos($html, 'id="msm-confirm-form"') !== false && strpos($html, 'id="msm-final-submit"') !== false && strpos($html, 'id="msm-submit-status"') !== false, 'final-submit loader hooks rendered');
 verify(strpos($html, 'P-&lt;7&gt; - Service &amp; support') !== false && strpos($html, 'RECEP - &lt;Immediate &amp; safe&gt;') !== false
-	&& strpos($html, 'mod_&lt;unsafe&gt;') !== false && strpos($html, 'pdf_&amp;unsafe') !== false, 'confirmation renders escaped server-confirmed invoice profile');
+	&& strpos($html, 'mod_&lt;unsafe&gt;') === false && strpos($html, 'pdf_&amp;unsafe') === false, 'confirmation renders escaped server-confirmed invoice profile');
 verify(strpos($html, 'MSMThirdPartyContactMayBeCreated') !== false, 'confirmation warns about configured contact creation');
+verify(strpos($html, 'MSMInvoicePlanModels') === false, 'technical models absent from confirmation');
 $html = msmRenderPreview($ui, str_repeat('a', 32));
 verify(strpos($html, 'name="sendmail"') < strpos($html, 'name="invoice"') && strpos($html, 'name="invoice"') < strpos($html, 'name="autocreate"'), 'required option order');
 verify(strpos($html, 'P-&lt;7&gt; - Service &amp; support') !== false && strpos($html, 'RECEP - &lt;Immediate &amp; safe&gt;') !== false, 'preview renders escaped server-confirmed invoice profile');
 verify(strpos($html, 'MSMThirdPartyContactMayBeCreated') !== false, 'preview warns about configured contact creation');
+verify(strpos($html, 'MSMInvoicePlanModels') === false && strpos($html, 'mod_&lt;unsafe&gt;') === false, 'technical models absent from preview');
+foreach (array(true, false) as $selected) {
+	$optionsUi = $ui;
+	foreach (array('sendmail', 'invoice', 'autocreate') as $option) { $optionsUi['options'][$option] = $selected; }
+	$optionHtml = msmRenderBooking($optionsUi, str_repeat('a', 32));
+	$expectedValue = ($selected ? 'Yes' : 'No').' &lt;&amp;&gt;';
+	verify(substr_count($optionHtml, '<th scope="row">') === 3 && substr_count($optionHtml, '<td>'.$expectedValue.'</td>') === 3, 'confirmation options table escaped values '.(int) $selected);
+}
+
 $conf->file = (object) array('dol_document_root' => array('main' => DOL_DOCUMENT_ROOT));
 $ui['phase'] = 'done'; $ui['results'] = array(1 => array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'failed'));
 $html = msmRenderBooking($ui, str_repeat('a', 32));
+verify(strpos($html, 'data-msm-options') === false, 'options table absent from completed results');
 verify(strpos($html, '<script>') === false && strpos($html, 'MSMBooked') !== false && strpos($html, 'MSMMail_failed') !== false && strpos($html, 'value="book"') === false, 'result preserves booking success beside mail warning without replay button');
 $ui['results'][1]['invoice'] = array('id' => 42, 'ref' => 'INV-<42>', 'entity' => 1, 'customer_id' => 5, 'customer_created' => true,
 	'subscription_id' => 9, 'pdf' => array('status' => 'verified', 'message' => 'MSMPdfVerified'));
@@ -289,7 +300,7 @@ foreach (array('en_US', 'de_DE') as $locale) {
   $rendered=msmRenderPreview($testui,str_repeat('a',32));
   verify(strpos($rendered,'name="start[1]"')!==false && strpos($rendered,'name="start[13]"')!==false,'V22 translated mixed preview renders '.$locale);
   if ($invoiceSelected) {
-   foreach (array(dol_escape_htmltag(price($display['amount']).' '.$conf->currency), dol_escape_htmltag(dol_print_date(msmReadDate('2026-11-10'), 'day')), 'P-&lt;7&gt;', 'RECEP - &lt;Immediate &amp; safe&gt;', 'mod_&lt;unsafe&gt;', 'pdf_&amp;unsafe', '19') as $expected) {
+   foreach (array(dol_escape_htmltag(price($display['amount']).' '.$conf->currency), dol_escape_htmltag(dol_print_date(msmReadDate('2026-11-10'), 'day')), 'P-&lt;7&gt;', 'RECEP - &lt;Immediate &amp; safe&gt;', '19') as $expected) {
     verify(strpos($rendered,$expected)!==false,'V22 translated invoice details retained '.$locale);
    }
   }
