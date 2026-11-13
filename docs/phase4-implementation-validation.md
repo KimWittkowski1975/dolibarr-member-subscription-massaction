@@ -76,6 +76,8 @@ a presentation-only revision; the historical technical evidence is retained.
 
 The preview exposes invoice intent, linked or planned customer, invoice amount, date, currency, product, VAT, payment term and the mandatory PDF attachment relationship when mail is selected. The customer-creation option is available only with invoice selection and the required rights.
 
+The confirmation options use a compact, content-sized, borderless table with left-aligned cells and normal font weight. The three translated option values and row-header semantics are retained. Styling is scoped to this confirmation-only table; other tables and result rendering are unchanged.
+
 The result page separates contribution, customer, invoice, PDF, mail, known rollback and unknown transaction outcomes. Customer and invoice links are rendered only after a fresh access check. Unknown outcomes show the diagnostic stage and explicitly unconfirmed IDs; they do not offer a retry action.
 
 The module JavaScript acts only on the final confirmation form. It sets the action before disabling the submit control, prevents duplicate submits, announces progress, moves focus to the status element and resets the state on `pageshow`, including browser back-forward cache restoration. Server-side form processing remains functional without JavaScript.

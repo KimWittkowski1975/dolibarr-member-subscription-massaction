@@ -10,7 +10,8 @@ function msmRenderBooking(array $state, $key, array $access = array())
 	if (!$confirm && $state['phase'] !== 'done') { $html .= '<div class="warning">'.msmText('MSMInterrupted').'</div>'; }
 	if ($confirm) {
 		$html .= '<form method="post" id="msm-confirm-form"><input type="hidden" name="token" value="'.dol_escape_htmltag(newToken()).'"><input type="hidden" name="preview" value="'.dol_escape_htmltag($key).'"><input type="hidden" name="revision" value="'.$state['revision'].'">';
-		$html .= '<table class="noborder" data-msm-options="1">';
+		$html .= '<style>table[data-msm-options="1"]{border-collapse:collapse;border:0;box-shadow:none}table[data-msm-options="1"] tr > th,table[data-msm-options="1"] tr > td{text-align:left;font-weight:normal;padding:.2em .75em .2em 0;border:0}</style>';
+		$html .= '<table data-msm-options="1" style="width:auto;max-width:100%;margin:0 0 1rem">';
 		foreach (array('sendmail' => 'MSMPlanMail', 'invoice' => 'MSMPlanInvoice', 'autocreate' => 'MSMPlanThirdParty') as $option => $label) {
 			$html .= '<tr><th scope="row">'.msmText($label).'</th><td>'.msmText($state['options'][$option] ? 'Yes' : 'No').'</td></tr>';
 		}
