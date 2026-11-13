@@ -33,7 +33,6 @@ SubscriptionBulkDatabaseError=The database operation failed. Review the applicat
 SubscriptionBulkDateHelp=Dates are suggested individually. Updating a start recalculates an automatic end. Manual ends are retained; use ↻ to reset one row. This preview does not book anything.
 SubscriptionBulkDescriptionHelp=Plain text, up to 1024 characters. Placeholders: {Member type}, {Start date}, {End date}. Unknown placeholders remain unchanged. Update to see the resolved description.
 SubscriptionBulkDescriptionInvalid=The description template must be valid text of at most 1024 characters without control characters.
-SubscriptionBulkDescriptionLabel=Invoice line description
 SubscriptionBulkDifferentAmounts=Different membership contribution amounts have been determined. Please verify the individual amounts before continuing.
 SubscriptionBulkDifferentPeriods=The selected members have different subscription durations or periods. Before confirming, check each start and end date and the individual contribution amounts.
 SubscriptionBulkDuplicateStart=A subscription with the same start date already exists for this member. Please choose a different start date.

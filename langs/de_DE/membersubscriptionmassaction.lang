@@ -33,7 +33,6 @@ SubscriptionBulkDatabaseError=Die Datenbankprüfung ist fehlgeschlagen. Die Vors
 SubscriptionBulkDateHelp=Termine werden individuell vorgeschlagen. Ein geänderter Beginn berechnet beim Aktualisieren ein automatisches Ende neu. Manuelle Enddaten bleiben erhalten; ↻ setzt eine Zeile zurück. Diese Vorschau führt keine Buchung aus.
 SubscriptionBulkDescriptionHelp=Klartext bis 1024 Zeichen. Platzhalter: {Member type}, {Start date}, {End date}. Unbekannte Platzhalter bleiben erhalten. Aktualisieren Sie die Vorschau, um die aufgelöste Beschreibung zu sehen.
 SubscriptionBulkDescriptionInvalid=Die Beschreibung muss gültiger UTF-8-Klartext mit höchstens 1024 Zeichen ohne Steuerzeichen sein.
-SubscriptionBulkDescriptionLabel=Beschreibung der geplanten Rechnungsposition
 SubscriptionBulkDifferentAmounts=Die ausgewählten Mitglieder haben unterschiedliche Beitragshöhen. Prüfen Sie die individuellen Beträge.
 SubscriptionBulkDifferentPeriods=Die ausgewählten Mitglieder haben unterschiedliche Laufzeiten oder Beitragszeiträume. Prüfen Sie die individuellen Termine und Beträge.
 SubscriptionBulkDuplicateStart=Für dieses Mitglied existiert bereits ein Beitrag mit demselben Startkalendertag. Wählen Sie einen anderen Beginn.

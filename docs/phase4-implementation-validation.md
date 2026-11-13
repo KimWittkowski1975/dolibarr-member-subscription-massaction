@@ -337,7 +337,7 @@ rows. All 18 columns, 71 IDs and the first ten historical columns are preserved.
 The coverage legend distinguishes real G2/G3 evidence, automated/synthetic cases
 and Owner-reported manual browser acceptance (M01–M04 per browser; M05 overall).
 The G4 decision remains PASS – OWNER ACCEPTED. Unexecuted risk scenarios and
-V24/production qualification remain open; this follow-up does not address FS4-03.
+V24/production qualification remain open; FS4-03 was outside that follow-up and is recorded separately below.
 
 Targeted FS4 checks: PHP lint, 388 included preview/calendar assertions, 25 invoice
 profile assertions, 179 booking/mail assertions and 87 standalone/parity assertions
@@ -346,3 +346,12 @@ the labeled offline EN/DE classification matrix. The live edit check waits for
 redirect completion; the initial immediate visibility check was a harness timing
 issue, not a module change. All 19 monitored business tables remained unchanged.
 CSV integrity and evidence-reference checks passed; no new business operations.
+
+### FS4-03 — Core field terminology
+
+Preview field and confirmation column now use the existing Core `Label` key:
+English "Label", German "Bezeichnung", matching the V22 single-contribution form.
+The unused module key was removed in EN/DE. Help text, placeholders, dates, input
+name/values/escaping and invoice processing remain unchanged. Targeted renderer
+checks read the actual Core translations with invoice off/on; this is a UI-only
+follow-up, with no new business operations or broader qualification.

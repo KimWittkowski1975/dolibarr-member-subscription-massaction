@@ -280,6 +280,9 @@ foreach (array('en_US', 'de_DE') as $locale) {
  foreach (file(__DIR__.'/../../langs/'.$locale.'/membersubscriptionmassaction.lang', FILE_IGNORE_NEW_LINES) as $entry) {
   if ($entry !== '' && $entry[0] !== '#' && strpos($entry, '=') !== false) { list($k,$v)=explode('=', $entry, 2); $langs->tab_translate[$k]=$v; }
  }
+ preg_match('/^Label=(.*)$/m', file_get_contents(DOL_DOCUMENT_ROOT.'/langs/'.$locale.'/main.lang'), $coreLabel);
+ $langs->tab_translate['Label'] = trim($coreLabel[1]);
+ verify($langs->transnoentities('Label') === ($locale === 'de_DE' ? 'Bezeichnung' : 'Label'), 'actual Core Label translation '.$locale);
  $langs->tab_translate['G2LegacySeven'] = '%s %s %s %s %s %s %s';
  // PHP 7.4 warns/returns false for missing sprintf arguments; PHP 8 throws.
  $legacyWarning = false; $legacyException = false; $legacyResult = null;
@@ -305,6 +308,11 @@ foreach (array('en_US', 'de_DE') as $locale) {
    }
   }
   verify(strpos($rendered,'<script>')===false,'V22 translated renderer escapes hostile labels '.$locale);
+  verify(strpos($rendered, '>'.msmText('Label').' <input') !== false, 'preview uses Core Label '.$locale.(int) $invoiceSelected);
+  $testui['phase'] = 'confirm';
+  $confirmed = msmRenderBooking($testui, str_repeat('a',32));
+  verify(strpos($confirmed, '<th>'.msmText('Label').'</th>') !== false, 'confirmation uses Core Label '.$locale.(int) $invoiceSelected);
+
  }
 }
 // FS4-01: actual V22 classification rules, invoice off/on, both renderers and mixed rows.

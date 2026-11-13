@@ -20,7 +20,7 @@ function msmRenderBooking(array $state, $key, array $access = array())
 		if (msmInvoiceMayCreateContact($state)) { $html .= '<p class="warning">'.msmText('MSMThirdPartyContactMayBeCreated').'</p>'; }
 	}
 	$html .= '<div class="div-table-responsive" style="width:0;min-width:100%"><table class="noborder centpercent"><tr class="liste_titre">';
-	foreach (array('Member', 'Type', 'Amount', 'DateSubscription', 'DateEndSubscription', 'SubscriptionBulkDescriptionLabel', 'Status') as $label) { $html .= '<th>'.msmText($label).'</th>'; }
+	foreach (array('Member', 'Type', 'Amount', 'DateSubscription', 'DateEndSubscription', 'Label', 'Status') as $label) { $html .= '<th>'.msmText($label).'</th>'; }
 	$html .= '</tr>';
 	$counts = array('success' => 0, 'skipped' => 0, 'failed' => 0, 'unknown' => 0, 'transport' => 0, 'hook' => 0, 'mailwarning' => 0, 'invoice' => 0, 'pdf' => 0, 'pdfwarning' => 0, 'customer' => 0); $sum = 0;
 	foreach ($state['rows'] as $id => $row) {
