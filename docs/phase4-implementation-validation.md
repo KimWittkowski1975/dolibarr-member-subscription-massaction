@@ -7,7 +7,7 @@
 | G2 | **FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS** | Completed for the bounded Dolibarr V22.0.5 profile below |
 | G3 | **APPROVED – PASS WITH DOCUMENTED LIMITATIONS** | Completed for the controlled V22 PDF/mail profile below; SMTP status uncertainty retained |
 | G4 | **PASS – OWNER ACCEPTED** | Owner-reported manual acceptance on 2026-11-12; subsequent targeted UI regressions passed |
-| V24 | **NOT QUALIFIED** | Source comparison only; separate runtime qualification required |
+| V24 | **NOT QUALIFIED** | V24.0.3 C2.1 T1/T2 synthetic regressions PASS; real runtime qualification NOT EXECUTED |
 | Production | **NOT QUALIFIED** | No release or production approval |
 
 The completed Phase 4 implementation baseline is merge commit
@@ -29,6 +29,95 @@ baseline is `efb59b071a51373bf7e208de4043b1291beb7ad5`.
 The sections below retain historical development/test evidence;
 the current gate table and the G2/G3/G4 closure sections supersede earlier pending-gate
 statements only within their expressly tested scopes.
+
+## C2.1 compatibility corrections (2026-11-13)
+
+Implementation and exact tested commit: `553fa75aba5d7b710a4b2363d087898c2213bfb4`,
+based on module `b946c8142355030532068e07166731541ceea69e`, on
+`feature/v24-compatibility`. This subsequent documentation update changes no tested code.
+C1-01–C1-05 are implemented locally; independent follow-up review remains pending.
+The earlier V22 G2/G3/G4 evidence and owner decisions O1–O7 remain scoped as recorded.
+
+**Binding C2.1 owner decisions E1–E4:**
+
+- **E1 / R16:** V22.0.5 retains the end of the contribution with the latest start.
+  V24.0.3 requires the maximum contribution end, matching its actual
+  `Adherent::update_end_date()` (Core change `f63662b4a5f`). The module keeps the
+  observed update return and persisted-value checks; it never repairs `datefin`.
+  `MsmCoreCompatibility` selects exact pins, not a blanket `>=24` branch.
+  Unknown versions stop booking before database access. Historical V22-only
+  statements requiring latest-start rather than MAX remain correct for V22.
+- **E2 / VAT:** V24.0.3 positive numeric `ADHERENT_VAT_FOR_SUBSCRIPTIONS` values
+  identify dictionary records, not rates. Invoice preflight rejects them with a
+  DE/EN message; no `c_tva` ID resolver or silent zero-rate fallback is introduced.
+  `0` and `defaultforfoundationcountry` retain their existing Core delegation;
+  V22 behavior remains unchanged. Subscription-only operation remains possible.
+  Changed tax settings invalidate the confirmed fingerprint before business APIs.
+- **E3 / scope:** only Core V22.0.5 `88ad132763be45e9620128c1830e41493e1cdd05`
+  and V24.0.3 `5c6c7ff6a5112413b1c27221c8d11750afad56f8` are policy targets.
+  These policies and synthetic PASS results do not qualify V24 installations,
+  other patches, Multicompany, additional tax profiles or production.
+- **E4 / execution:** T1/T2 only. No application bootstrap, real DB connection,
+  business operation, live PDF generation, SMTP or installation change was used.
+  Real T3/T4 operations require separate owner authorization.
+
+C1-03 uses `crabe` on V22 and `sponge` on V24 only when model configuration is
+empty. Explicit type/general models retain priority; invalid paths or unavailable
+files remain errors. C1-04 supplies both `accountid=0` and legacy `ccountid=0`,
+without changing hook outcomes, attachments or post-commit transport guards.
+C1-05 adds the optional trailing `ref_ext` to the booking double, preserving the
+ten existing parameters. PHP 7.4-compatible syntax is retained.
+
+### Executed T1/T2 evidence
+
+Local PHP **8.2.35**. Set `DOLIBARR_TEST_ROOT` to the pinned Core checkout and run
+`php test/unit/<runner>.php`. V22 used `/home/marcel/dolibarr-bulk-test`; V24 used
+`/home/marcel/dolibarr-v24`. The final sequence per Core was `invoice`,
+`invoiceprofile`, `maildelivery`, `invoicepdf`, `postcommit`.
+`invoice` includes `booking`, which includes `preview`; these were not also run
+standalone in the final sequence. Counts below are per component, not summed
+again when included by another runner.
+
+| Runner / assertions | V22.0.5 | V24.0.3 | Evidence boundary |
+| --- | --- | --- | --- |
+| `preview.php` / 388 | PASS | PASS | Pinned Core calendar APIs; synthetic input/history |
+| `booking.php` / 208 additional | PASS | PASS | API signature, R16, transaction/replay, hook/renderer contracts |
+| `invoiceprofile.php` / 40 additional | PASS | PASS | Tax preflight and configuration changes; real model-file readability checks |
+| `invoice.php` / 60 additional | PASS | PASS | Synthetic Core business adapters, rollback, VAT changes before booking |
+| `maildelivery.php` / 17 | PASS | PASS | Same fixture-only runner under both environments; not a real Core transport test |
+| `invoicepdf.php` / 16 additional | PASS | PASS | Isolated temporary synthetic files; no Dolibarr Documents or Core PDF rendering |
+| `postcommit.php` / 13 additional | PASS | PASS | Synthetic checkpoint/PDF/mail ordering |
+
+Version-independent `php test/unit/run.php`: **98 PASS**, including language-key
+parity, exact-version policy and rejection before DB access.
+`node test/unit/loading.js`: **6 PASS**, synthetic DOM only.
+PHP lint: **30 files PASS**. `git diff --check` and committed whitespace check: PASS.
+The existing PHP 7.4/8.2 CI workflow is unchanged; PHP 7.4 execution and new GitHub
+CI were **NOT EXECUTED** locally (no push authorized).
+
+R16 tests execute each pinned Core's real end-update method using an in-memory DB
+adapter. The identical older-longer overlap yields 2030-06-30 on V22 and 2030-12-31
+on V24. Newer-longer, tied starts in either modeled result order, failed Core
+update and corrupted stored end are covered. V22 Core does not define an SQL tie
+order; these tests do not promise deterministic real-DB ordering for tied starts.
+V24 uses the maximum end independently of that ordering. The VAT tests also expose
+Core's V24-only VAT hook: synthetic non-VAT seller returns zero on V22 and the
+explicit synthetic hook's rate on V24; the module preserves each Core result.
+Initial fixture-only failures (missing country cache / VAT hook contract) were
+resolved by matching the actual Core APIs; existing regression assertions remain.
+
+Sanitized command output, exits, exact Core/implementation SHAs and PHP file hashes
+are retained locally in `/home/marcel/dolibarr-c21-validation-20261113/results.json`.
+No private runtime data or original V22 evidence was copied into this document.
+The authoritative matrix retains all 71 IDs, 18 columns and its first ten
+historical fields; only directly affected current traceability fields are extended.
+
+**NOT EXECUTED / NOT QUALIFIED:** real V24 booking/invoice rollback, PDF/ECM,
+SMTP/delivery, authenticated HTTP/browser, external-writer/concurrency,
+connection/COMMIT loss, Multicompany and additional tax/product profiles.
+Temporary module ID, release limits, SMTP diagnostic 121 and prior risk boundaries
+remain. G3-W02 remains template configuration only, not a module finding.
+Next: independent C2.1 review, then separately authorized bounded V24 T3/T4 tests.
 
 ## Scope and provenance
 
