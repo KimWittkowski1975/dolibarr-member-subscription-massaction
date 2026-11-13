@@ -55,12 +55,8 @@ try {
 	}
 	$key = $method === 'POST' ? ($_POST['preview'] ?? null) : ($_GET['preview'] ?? null);
 	$state = msmReadPreview($_SESSION, $key, (int) $user->id, (int) $conf->entity, dol_now());
-	// Migrate old previews without carrying invoice consent into a booking.
-	if (($state['format'] ?? 0) !== 3) {
-		$state['format'] = 3; $state['phase'] = 'preview'; $state['revision']++;
-		$state['options']['invoice'] = false; $state['options']['autocreate'] = false;
-		$state['rows'] = array(); $_SESSION['msm_previews'][$key] = $state;
-	}
+	$state = msmUpgradePreview($state);
+	$_SESSION['msm_previews'][$key] = $state;
 } catch (Exception $e) {
 	accessforbidden($langs->trans('MSMInvalidRun'));
 }
@@ -80,6 +76,7 @@ if ($method === 'POST') {
 			if (!session_write_close()) { throw new RuntimeException('MSMSessionFailure'); }
 			require_once __DIR__.'/class/booking.class.php';
 			require_once __DIR__.'/class/mail.class.php';
+			require_once __DIR__.'/class/invoicepdf.class.php';
 			$save = static function ($updated) use ($key) {
 				if (!session_start()) { throw new RuntimeException('MSMSessionFailure'); }
 				$current = $_SESSION['msm_previews'][$key] ?? null;
@@ -90,7 +87,7 @@ if ($method === 'POST') {
 				if (!session_write_close()) { throw new RuntimeException('MSMSessionFailure'); }
 			};
 			$save($state); // Read back consumed state before the first database side effect.
-			$state = msmProcessBooking($state, new MsmBookingService($db), new MsmSubscriptionMail($db), $user, $save);
+			$state = msmProcessBooking($state, new MsmBookingService($db), new MsmSubscriptionMail($db), $user, $save, new MsmInvoicePdfService($db));
 		} elseif ($action === 'edit') {
 			msmBookingPost($state, $_POST, 'edit');
 			if ($state['phase'] !== 'confirm') { throw new InvalidArgumentException('MSMInvalidForm'); }
@@ -124,10 +121,14 @@ try {
 	$state['rows'] = array();
 }
 $titlekey = msmPageTitleKey($state['phase']);
-llxHeader('', $langs->trans($titlekey));
+$morejs = $state['phase'] === 'confirm' ? array(dol_buildpath('/membersubscriptionmassaction/js/subscription.js', 1)) : array();
+llxHeader('', $langs->trans($titlekey), '', '', 0, 0, $morejs);
 print load_fiche_titre($langs->trans($titlekey));
 if ($error) { print '<div class="error">'.msmText($error).'</div>'; }
-if ($state['rows']) { print $state['phase'] === 'preview' ? msmRenderPreview($state, $key) : msmRenderBooking($state, $key); }
+if ($state['rows']) {
+	$access = $state['phase'] === 'done' ? msmResultAccess($db, $user, $state) : array();
+	print $state['phase'] === 'preview' ? msmRenderPreview($state, $key) : msmRenderBooking($state, $key, $access);
+}
 else { print '<p><a href="'.dol_escape_htmltag(msmListUrl()).'">'.msmText('MSMBack').'</a></p>'; }
 llxFooter();
 $db->close();

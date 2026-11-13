@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 require_once __DIR__.'/preview.class.php';
-/** One owned transaction per member. No invoice/complementary action is invoked. */
+/** One owned transaction per member. Invoice operations share the owned transaction. */
 class MsmBookingService
 {
 	private $db;
 	public function __construct($db) { $this->db = $db; }
+	protected function invoicing() { require_once __DIR__.'/invoice.class.php'; return new MsmInvoiceService($this->db); }
 	protected function member($id)
 	{
 		require_once __DIR__.'/bookingmember.class.php';
@@ -68,41 +69,49 @@ class MsmBookingService
 	public function book($id, array $expected, array $options, $user, $overlapConfirmed)
 	{
 		$result = array('status' => 'failed', 'message' => 'MSMBookingFailed', 'id' => 0, 'amount' => 0, 'mail' => 'not_selected', 'stop' => false);
-		if (!empty($options['invoice']) || !empty($options['autocreate'])) { $result['message'] = 'MSMUnsupportedAction'; return $result; }
-		if (!MsmPreviewService::canCreateSubscriptionWithOptions($user)) { $result['message'] = 'NotEnoughPermissions'; return $result; }
+		if ((!empty($options['invoice']) && empty($expected['invoice'])) || (!empty($options['autocreate']) && empty($options['invoice']))) { $result['message'] = 'MSMUnsupportedAction'; return $result; }
+		if (!MsmPreviewService::canCreateSubscriptionWithOptions($user, !empty($options['invoice']), !empty($options['sendmail']))) { $result['message'] = 'NotEnoughPermissions'; return $result; }
 		// Never touch a transaction owned by another caller.
 		if ((int) $this->db->transaction_opened !== 0) { $result['status'] = 'unknown'; $result['stop'] = true; return $result; }
-		$owned = false; $committing = false;
+		$owned = false; $committing = false; $invoice = null;
+		$diagnostic = array('stage' => 'preflight', 'subscription_id' => 0, 'invoice_id' => 0, 'customer_id' => 0);
 		try {
 			if ($this->transactionActive()) { $result['status'] = 'unknown'; $result['stop'] = true; return $result; }
 			if (!$this->db->begin()) { throw new RuntimeException('SubscriptionBulkDatabaseError'); }
 			$owned = true;
 			$this->lock($id);
+			if (!empty($options['invoice'])) { $this->invoicing()->lock($id); }
 			$user = $this->currentUser($user);
-			if (!MsmPreviewService::canCreateSubscriptionWithOptions($user)) { throw new RuntimeException('NotEnoughPermissions'); }
+			if (!MsmPreviewService::canCreateSubscriptionWithOptions($user, !empty($options['invoice']), !empty($options['sendmail']))) { throw new RuntimeException('NotEnoughPermissions'); }
 			$member = $this->member($id);
-			$row = $this->preview($member)->previewSubscriptionWithOptions($user, $expected['start'], false, $options['sendmail'], $expected['end'], false, $options['description']);
+			$row = $this->preview($member)->previewSubscriptionWithOptions($user, $expected['start'], !empty($options['invoice']), $options['sendmail'], $expected['end'], !empty($options['autocreate']), $options['description']);
 			if ($row['errors'] || !hash_equals($expected['fingerprint'], $row['fingerprint']) || ($row['overlaps'] && !$overlapConfirmed)) {
 				$result['status'] = 'skipped';
 				throw new RuntimeException('MSMChangedConfirmation');
 			}
+			$diagnostic['stage'] = 'subscription';
 			$subscription = $member->subscription($row['start'], $row['amount'], 0, '', $row['description'], '', '', '', $row['end'], $member->typeid);
+			$diagnostic['subscription_id'] = max(0, (int) $subscription);
 			if ((int) $this->db->transaction_opened !== 1 || !$this->transactionActive()) { throw new RuntimeException('MSMTransactionUnknown'); }
 			if ($subscription <= 0) { throw new RuntimeException('MSMBookingFailed'); }
+			if (!empty($options['invoice'])) { $invoice = $this->invoicing()->create($member, $subscription, $row, $user, $diagnostic); }
 			$this->verifyStored($id, $subscription, $member, $row);
+			$diagnostic['stage'] = 'commit';
 			$committing = true;
 			if (!$this->db->commit() || (int) $this->db->transaction_opened !== 0 || $this->transactionActive()) { throw new RuntimeException('MSMTransactionUnknown'); }
 			$owned = false;
 			$result = array('status' => 'success', 'message' => 'MSMBooked', 'id' => (int) $subscription, 'amount' => $row['amount'], 'mail' => 'not_selected', 'stop' => false);
 			// Internal only; never put live DB objects in the session/result renderer.
 			$result['_member'] = $member;
+			if ($invoice !== null) { $result['invoice'] = $invoice; }
 		} catch (Throwable $e) {
 			$safe = false;
 			if (!$owned) { $result['stop'] = true; }
 			if ($owned && !$committing) { try { $safe = $this->rollbackOwned(); } catch (Throwable $ignored) {} }
 			if ($committing || ($owned && !$safe)) { $result['status'] = 'unknown'; $result['stop'] = true; $result['message'] = 'MSMTransactionUnknown'; }
-			else { $result['message'] = in_array($e->getMessage(), array('MSMChangedConfirmation', 'MSMConsistencyError', 'MSMTransactionUnsupported', 'NotEnoughPermissions'), true) ? $e->getMessage() : 'MSMBookingFailed'; }
+			else { $result['message'] = in_array($e->getMessage(), array('MSMChangedConfirmation', 'MSMConsistencyError', 'MSMTransactionUnsupported', 'NotEnoughPermissions', 'MSMInvoiceFailed'), true) ? $e->getMessage() : 'MSMBookingFailed'; }
 		}
+		if ($result['status'] !== 'success') { $result['diagnostic'] = $diagnostic; $result['rollback'] = $owned && !$committing && !empty($safe) ? 'confirmed' : 'unconfirmed'; }
 		return $result;
 	}
 }

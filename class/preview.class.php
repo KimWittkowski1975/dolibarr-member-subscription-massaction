@@ -24,7 +24,7 @@ class MsmPreviewService
 		if (!empty($user->socid) || !isModEnabled('member') || !$user->hasRight('adherent', 'lire') || !$user->hasRight('adherent', 'cotisation', 'creer')) {
 			return false;
 		}
-		if ($invoice && (!isModEnabled('invoice') || !isModEnabled('societe') || !$user->hasRight('facture', 'lire') || !$user->hasRight('facture', 'creer'))) {
+		if ($invoice && (!isModEnabled('invoice') || !isModEnabled('societe') || !$user->hasRight('societe', 'lire') || !$user->hasRight('facture', 'lire') || !$user->hasRight('facture', 'creer'))) {
 			return false;
 		}
 		if ($invoice && getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && (!$user->hasRight('facture', 'invoice_advance', 'validate') || ($sendmail && !$user->hasRight('facture', 'invoice_advance', 'send')))) {
@@ -167,7 +167,7 @@ class MsmPreviewService
 			}
 			$this->member->thirdparty = null;
 			if ($invoice) {
-				throw new RuntimeException('SubscriptionBulkThirdPartyMissing');
+				throw new RuntimeException('MSMThirdPartyInaccessible');
 			}
 		} elseif ($invoice) {
 			if (!$autocreate) {
@@ -180,6 +180,8 @@ class MsmPreviewService
 		}
 		return false;
 	}
+
+	protected function invoiceProfile() { require_once __DIR__.'/invoiceprofile.class.php'; return new MsmInvoiceProfile($this->db); }
 
 	/**
 	 * Read and validate planned values without creating records or sending mail.
@@ -246,7 +248,7 @@ class MsmPreviewService
 				$row['thirdparty'] = $this->member->thirdparty->name;
 			}
 		} catch (Throwable $e) {
-			$row['errors'][] = in_array($e->getMessage(), array('NotEnoughPermissions', 'SubscriptionBulkThirdPartyMissing'), true) ? $e->getMessage() : 'SubscriptionBulkDatabaseError';
+			$row['errors'][] = in_array($e->getMessage(), array('NotEnoughPermissions', 'SubscriptionBulkThirdPartyMissing', 'MSMThirdPartyInaccessible'), true) ? $e->getMessage() : 'SubscriptionBulkDatabaseError';
 		}
 		if (!self::canCreateSubscriptionWithOptions($user, $invoice, $sendmail)) {
 			$row['errors'][] = 'NotEnoughPermissions';
@@ -265,6 +267,10 @@ class MsmPreviewService
 				$row['errors'][] = 'MSMProductUnavailable';
 			}
 		}
+		if ($invoice && !$row['errors']) {
+			try { $row['invoice'] = $this->invoiceProfile()->resolve($this->member, $user, $row['autocreate'], $sendmail); }
+			catch (Throwable $e) { $row['errors'][] = in_array($e->getMessage(), array('NotEnoughPermissions', 'MSMProductUnavailable', 'SubscriptionBulkThirdPartyMissing'), true) ? $e->getMessage() : 'MSMInvoiceProfileUnsupported'; }
+		}
 		if ($sendmail && !isValidEmail((string) $this->member->email)) {
 			$row['warnings'][] = 'SubscriptionBulkEmailMissing';
 		}
@@ -276,7 +282,7 @@ class MsmPreviewService
 		$row['status'] = $row['errors'] ? 'error' : ($row['warnings'] ? 'warning' : 'ready');
 		// Kept in the session only; detects changed amounts, recipients, links and settings.
 		$source = array($this->member->typeid, $this->member->socid, $this->member->entity, $this->member->email, $this->member->default_lang, $this->member->morphy, $this->member->company, $this->member->address, $this->member->zip, $this->member->town, $this->member->country_id, $this->member->phone);
-		foreach (array('ADHERENT_PRODUCT_ID_FOR_SUBSCRIPTIONS', 'ADHERENT_VAT_FOR_SUBSCRIPTIONS', 'ADHERENT_EMAIL_TEMPLATE_SUBSCRIPTION', 'ADHERENT_MAIL_FROM', 'FACTURE_ADDON_PDF') as $setting) {
+		foreach (array('ADHERENT_BANK_USE', 'ADHERENT_PRODUCT_ID_FOR_SUBSCRIPTIONS', 'ADHERENT_VAT_FOR_SUBSCRIPTIONS', 'ADHERENT_EMAIL_TEMPLATE_SUBSCRIPTION', 'ADHERENT_MAIL_FROM', 'FACTURE_ADDON_PDF') as $setting) {
 			$source[] = getDolGlobalString($setting);
 		}
 		$row['fingerprint'] = hash('sha256', json_encode(array($row, $source, $invoice, $sendmail, $autocreate, $descriptiontemplate)));

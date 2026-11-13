@@ -111,6 +111,9 @@ $state = array('phase' => 'confirm', 'revision' => 7, 'ids' => array(1), 'option
 $post = array('action' => 'book', 'revision' => '7');
 $consumed = msmConsumeConfirmation($state, $post); verify($consumed['phase'] === 'processing', 'consume before effects');
 fails(static function () use ($consumed, $post) { msmConsumeConfirmation($consumed, $post); }, 'MSMInvalidForm');
+$invoiceState = $state; $invoiceState['options']['invoice'] = true; $invoiceState['options']['autocreate'] = true;
+$invoiceConsumed = msmConsumeConfirmation($invoiceState, $post);
+verify($invoiceConsumed['phase'] === 'processing' && $invoiceConsumed['options']['invoice'] && $invoiceConsumed['options']['autocreate'], 'server-held invoice consent consumed');
 foreach (array('amount', 'invoice', 'autocreate', 'ids', 'email') as $field) { $bad = $post; $bad[$field] = '1'; fails(static function () use ($state, $bad) { msmConsumeConfirmation($state, $bad); }, 'MSMInvalidForm'); }
 $bad = $post; $bad['overlap'] = array(999 => '1'); fails(static function () use ($state, $bad) { msmConsumeConfirmation($state, $bad); }, 'MSMInvalidForm');
 // Mail hooks use the production dispatcher, but never a transport or real hook loader.
@@ -211,16 +214,52 @@ $otherDb->lockFail = false; $otherService->reader->row['errors'] = array('Subscr
 verify($otherService->book(1, $row, $options, $user, false)['status'] === 'skipped', 'subsequent contender checks duplicate again');
 // Render production confirmation/results using hostile synthetic labels.
 $conf->global->MAIN_MAX_DECIMALS_UNIT = 2; $conf->global->MAIN_MAX_DECIMALS_TOT = 2; $conf->global->MAIN_MAX_DECIMALS_SHOWN = 2;
+$renderLangs = $langs;
+$langs = new class {
+	public function transnoentities($key, ...$values) { return $key.(in_array($key, array('Yes', 'No'), true) ? ' <&>' : '').($values ? ':'.implode('|', $values) : ''); }
+	public function transnoentitiesnoconv($key, ...$values) { return $this->transnoentities($key, ...$values); }
+	public function trans($key, ...$values) { return $this->transnoentities($key, ...$values); }
+};
 $display = array_merge($row, array('member' => '<script>alert(1)</script>', 'type' => '<type>', 'quantity' => 1, 'unit' => 'd', 'notices' => array(), 'warnings' => array(), 'thirdparty' => '', 'status' => 'ready'));
-$ui = array('phase' => 'confirm', 'revision' => 1, 'ids' => array(1), 'options' => $options, 'rows' => array(1 => $display), 'common' => '');
+$display['invoice'] = array('date' => '2026-11-10', 'vat' => 19, 'product' => 7, 'term' => 3, 'term_label' => 'RECEP - <Immediate & safe>',
+	'number_model' => 'mod_<unsafe>', 'pdf_model' => 'pdf_&unsafe', 'create_customer' => true,
+	'product_snapshot' => array('ref' => 'P-<7>', 'label' => 'Service & support'), 'settings' => array('THIRDPARTY_DEFAULT_CREATE_CONTACT' => '1'));
+$uiOptions = array_merge($options, array('invoice' => true, 'autocreate' => true));
+$ui = array('phase' => 'confirm', 'revision' => 1, 'ids' => array(1), 'options' => $uiOptions, 'rows' => array(1 => $display), 'common' => '');
 $html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '<script>') === false && strpos($html, 'value="book"') !== false && strpos($html, 'MSMOneDay') !== false, 'confirmation escaping booking control and one-day notice');
+verify(strpos($html, 'id="msm-confirm-form"') !== false && strpos($html, 'id="msm-final-submit"') !== false && strpos($html, 'id="msm-submit-status"') !== false, 'final-submit loader hooks rendered');
+verify(strpos($html, 'P-&lt;7&gt; - Service &amp; support') !== false && strpos($html, 'RECEP - &lt;Immediate &amp; safe&gt;') !== false
+	&& strpos($html, 'mod_&lt;unsafe&gt;') === false && strpos($html, 'pdf_&amp;unsafe') === false, 'confirmation renders escaped server-confirmed invoice profile');
+verify(strpos($html, 'MSMThirdPartyContactMayBeCreated') !== false, 'confirmation warns about configured contact creation');
+verify(strpos($html, 'MSMInvoicePlanModels') === false, 'technical models absent from confirmation');
 $html = msmRenderPreview($ui, str_repeat('a', 32));
 verify(strpos($html, 'name="sendmail"') < strpos($html, 'name="invoice"') && strpos($html, 'name="invoice"') < strpos($html, 'name="autocreate"'), 'required option order');
+verify(strpos($html, 'P-&lt;7&gt; - Service &amp; support') !== false && strpos($html, 'RECEP - &lt;Immediate &amp; safe&gt;') !== false, 'preview renders escaped server-confirmed invoice profile');
+verify(strpos($html, 'MSMThirdPartyContactMayBeCreated') !== false, 'preview warns about configured contact creation');
+verify(strpos($html, 'MSMInvoicePlanModels') === false && strpos($html, 'mod_&lt;unsafe&gt;') === false, 'technical models absent from preview');
+foreach (array(true, false) as $selected) {
+	$optionsUi = $ui;
+	foreach (array('sendmail', 'invoice', 'autocreate') as $option) { $optionsUi['options'][$option] = $selected; }
+	$optionHtml = msmRenderBooking($optionsUi, str_repeat('a', 32));
+	$expectedValue = ($selected ? 'Yes' : 'No').' &lt;&amp;&gt;';
+	verify(substr_count($optionHtml, '<th scope="row">') === 3 && substr_count($optionHtml, '<td>'.$expectedValue.'</td>') === 3, 'confirmation options table escaped values '.(int) $selected);
+}
+
 $conf->file = (object) array('dol_document_root' => array('main' => DOL_DOCUMENT_ROOT));
 $ui['phase'] = 'done'; $ui['results'] = array(1 => array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'failed'));
 $html = msmRenderBooking($ui, str_repeat('a', 32));
+verify(strpos($html, 'data-msm-options') === false, 'options table absent from completed results');
 verify(strpos($html, '<script>') === false && strpos($html, 'MSMBooked') !== false && strpos($html, 'MSMMail_failed') !== false && strpos($html, 'value="book"') === false, 'result preserves booking success beside mail warning without replay button');
+$ui['results'][1]['invoice'] = array('id' => 42, 'ref' => 'INV-<42>', 'entity' => 1, 'customer_id' => 5, 'customer_created' => true,
+	'subscription_id' => 9, 'pdf' => array('status' => 'verified', 'message' => 'MSMPdfVerified'));
+$html = msmRenderBooking($ui, str_repeat('a', 32), array(1 => array('invoice' => true, 'customer' => true)));
+verify(strpos($html, '/compta/facture/card.php?facid=42') !== false && strpos($html, '/societe/card.php?socid=5') !== false, 'authorized invoice and created-customer links');
+verify(strpos($html, 'INV-&lt;42&gt;') !== false && strpos($html, 'MSMPdfVerified') !== false && strpos($html, 'value="book"') === false, 'escaped invoice result and PDF status without replay');
+$ui['results'][1] = array('status' => 'unknown', 'message' => 'MSMTransactionUnknown', 'id' => 0, 'amount' => 0, 'mail' => 'unknown', 'stop' => true,
+	'rollback' => 'unconfirmed', 'diagnostic' => array('stage' => '<commit>', 'subscription_id' => 9, 'invoice_id' => 42, 'customer_id' => 5));
+$html = msmRenderBooking($ui, str_repeat('a', 32));
+verify(strpos($html, '&lt;commit&gt;') !== false && strpos($html, 'MSMRollbackUnconfirmed') !== false && strpos($html, 'MSMUnconfirmedIdentifier') !== false, 'unknown transaction renders reconciliation evidence');
 // Narrow UI follow-up: state-specific title, no redundant cancel button, retained content.
 verify(msmPageTitleKey('preview') === 'MSMTitle', 'UI preview title unchanged');
 verify(msmPageTitleKey('confirm') === 'MSMConfirmTitle', 'UI separate confirmation title');
@@ -232,6 +271,84 @@ $ui['phase'] = 'preview'; $ui['rows'][1]['member'] = 'Synthetic Synthetic';
 $html = msmRenderPreview($ui, str_repeat('a', 32));
 verify(strpos($html, 'value="cancel"') === false && strpos($html, msmListUrl()) !== false, 'UI cancel removed and back link retained');
 verify(strpos($html, 'Synthetic Synthetic #1') !== false, 'UI repeated name parts preserved');
-$ui['phase'] = 'done'; $html = msmRenderBooking($ui, str_repeat('a', 32));
+$ui['phase'] = 'done'; $ui['results'][1] = array('status' => 'success', 'message' => 'MSMBooked', 'id' => 9, 'amount' => 12, 'mail' => 'not_selected');
+$html = msmRenderBooking($ui, str_repeat('a', 32));
 verify(strpos($html, '/adherents/subscription.php?rowid=1') !== false && strpos($html, ' #9</a>') !== false, 'UI member subscription link and contribution ID retained');
+// Exercise the actual V22 Translate limit with the shipped translations and renderer.
+foreach (array('en_US', 'de_DE') as $locale) {
+ $langs = new Translate(DOL_DOCUMENT_ROOT, $conf); $langs->setDefaultLang($locale);
+ foreach (file(__DIR__.'/../../langs/'.$locale.'/membersubscriptionmassaction.lang', FILE_IGNORE_NEW_LINES) as $entry) {
+  if ($entry !== '' && $entry[0] !== '#' && strpos($entry, '=') !== false) { list($k,$v)=explode('=', $entry, 2); $langs->tab_translate[$k]=$v; }
+ }
+ preg_match('/^Label=(.*)$/m', file_get_contents(DOL_DOCUMENT_ROOT.'/langs/'.$locale.'/main.lang'), $coreLabel);
+ $langs->tab_translate['Label'] = trim($coreLabel[1]);
+ verify($langs->transnoentities('Label') === ($locale === 'de_DE' ? 'Bezeichnung' : 'Label'), 'actual Core Label translation '.$locale);
+ $langs->tab_translate['G2LegacySeven'] = '%s %s %s %s %s %s %s';
+ // PHP 7.4 warns/returns false for missing sprintf arguments; PHP 8 throws.
+ $legacyWarning = false; $legacyException = false; $legacyResult = null;
+ set_error_handler(static function ($severity, $message, $file, $line) use (&$legacyWarning) {
+  if (strpos($message, 'sprintf') !== false) { $legacyWarning = true; return true; }
+  throw new ErrorException($message, 0, $severity, $file, $line);
+ });
+ try { $legacyResult = $langs->transnoentities('G2LegacySeven','1','2','3','4','5','6','7'); }
+ catch (ArgumentCountError $e) { $legacyException = true; }
+ finally { restore_error_handler(); }
+ verify(PHP_VERSION_ID >= 80000 ? $legacyException : ($legacyWarning && $legacyResult !== '1 2 3 4 5 6 7'), 'V22 seven-parameter regression reproduces');
+ foreach (array(false,true) as $invoiceSelected) {
+  $testui=$ui; $testui['phase']='preview'; $testui['options']['invoice']=$invoiceSelected;
+  $testui['rows'][1]=$display;
+  if (!$invoiceSelected) { unset($testui['rows'][1]['invoice']); }
+  $missing=$display; unset($missing['invoice']); $missing['thirdparty']=''; $missing['status']='error';$missing['errors']=array('SubscriptionBulkThirdPartyMissing');$missing['notices']=$missing['errors'];
+  $testui['rows'][13]=$missing;
+  $rendered=msmRenderPreview($testui,str_repeat('a',32));
+  verify(strpos($rendered,'name="start[1]"')!==false && strpos($rendered,'name="start[13]"')!==false,'V22 translated mixed preview renders '.$locale);
+  if ($invoiceSelected) {
+   foreach (array(dol_escape_htmltag(price($display['amount']).' '.$conf->currency), dol_escape_htmltag(dol_print_date(msmReadDate('2026-11-10'), 'day')), 'P-&lt;7&gt;', 'RECEP - &lt;Immediate &amp; safe&gt;', '19') as $expected) {
+    verify(strpos($rendered,$expected)!==false,'V22 translated invoice details retained '.$locale);
+   }
+  }
+  verify(strpos($rendered,'<script>')===false,'V22 translated renderer escapes hostile labels '.$locale);
+  verify(strpos($rendered, '>'.msmText('Label').' <input') !== false, 'preview uses Core Label '.$locale.(int) $invoiceSelected);
+  $testui['phase'] = 'confirm';
+  $confirmed = msmRenderBooking($testui, str_repeat('a',32));
+  verify(strpos($confirmed, '<th>'.msmText('Label').'</th>') !== false, 'confirmation uses Core Label '.$locale.(int) $invoiceSelected);
+
+ }
+}
+// FS4-01: actual V22 classification rules, invoice off/on, both renderers and mixed rows.
+foreach (array(0, 1) as $disabled) {
+ foreach (array(0, 1, 2, 3) as $client) {
+  foreach (array(false, true) as $selected) {
+   $case = $ui; $case['phase'] = 'confirm'; $case['options']['invoice'] = $selected;
+   $case['rows'] = array(1 => $display, 2 => $display);
+   $case['rows'][1]['invoice']['customer_id'] = 4;
+   $case['rows'][1]['invoice']['create_customer'] = false;
+   $case['rows'][1]['invoice']['customer_snapshot']['client'] = $client;
+   $case['rows'][1]['invoice']['settings']['SOCIETE_DISABLE_PROSPECTSCUSTOMERS'] = (string) $disabled;
+   $case['rows'][2]['invoice']['customer_id'] = 5;
+   $case['rows'][2]['invoice']['create_customer'] = false;
+   $case['rows'][2]['invoice']['customer_snapshot']['client'] = 1;
+   $case['rows'][2]['invoice']['settings']['SOCIETE_DISABLE_PROSPECTSCUSTOMERS'] = (string) $disabled;
+   $expected = $selected && ($client === 0 || $client === 2 || ($client === 3 && $disabled));
+   $warning = msmText('MSMCustomerClassificationMayChange');
+   foreach (array('preview', 'confirm') as $phase) {
+    $case['phase'] = $phase;
+    $rendered = $phase === 'preview' ? msmRenderPreview($case, str_repeat('a',32)) : msmRenderBooking($case, str_repeat('a',32));
+    verify(substr_count($rendered, $warning) === ($expected ? 1 : 0), 'classification warning mixed rows '.$phase.$client.$disabled.(int) $selected);
+    verify(strpos($rendered, '<script>') === false && strpos($rendered, 'P-&lt;7&gt;') !== false, 'classification warning keeps renderer escaping');
+   }
+  }
+ }
+}
+$newCustomerRow = $case['rows'][1]; $newCustomerRow['invoice']['create_customer'] = true;
+verify(!msmCustomerClassificationMayChange($newCustomerRow), 'classification warning excludes new customer');
+$savedWarning = $langs->tab_translate['MSMCustomerClassificationMayChange'];
+$langs->tab_translate['MSMCustomerClassificationMayChange'] = '<classification & warning>';
+foreach (array('preview', 'confirm') as $phase) {
+ $case['phase'] = $phase;
+ $rendered = $phase === 'preview' ? msmRenderPreview($case, str_repeat('a',32)) : msmRenderBooking($case, str_repeat('a',32));
+ verify(strpos($rendered, '&lt;classification &amp; warning&gt;') !== false && strpos($rendered, '<classification & warning>') === false, 'classification warning translation escaped '.$phase);
+}
+$langs->tab_translate['MSMCustomerClassificationMayChange'] = $savedWarning;
+$langs = $renderLangs;
 echo ($passed - $baseline)." booking/mail assertions passed (synthetic transactions and transports only).\n";
