@@ -79,6 +79,20 @@ foreach (array('0', 'defaultforfoundationcountry', '7') as $setting) {
 		verify($profile->resolve($member, $user, false, false)['vat'] === 0.0, 'Core VAT policy '.DOL_VERSION.' '.$setting);
 	}
 }
+// PR6-01: strict supported literals; malformed IDs must execute the real rejection.
+foreach (array(null, '', '0', 'defaultforfoundationcountry') as $setting) {
+	if ($setting === null) { unset($conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS); }
+	else { $conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS = $setting; }
+	verify($profile->resolve($member, $user, false, false)['vat'] === 0.0, 'PR6 supported VAT literal '.var_export($setting, true));
+}
+foreach (array('7', '7foo', ' 7bad', '+7bad', '7.5', '1e2', '-1', '00', '0.0', '0foo', ' 0', '0 ', ' ', 'garbage', 'DEFAULTFORFOUNDATIONCOUNTRY') as $setting) {
+	$conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS = $setting;
+	if (DOL_VERSION === '24.0.3') {
+		fails(static function () use ($profile, $member, $user) { $profile->resolve($member, $user, false, false); }, 'MSMInvoiceVatIdUnsupported');
+	} else {
+		verify($profile->resolve($member, $user, false, false)['vat'] === 0.0, 'PR6 preserves V22 VAT literal '.$setting);
+	}
+}
 // Both cores delegate to Core VAT; only V24 invokes the VAT hook (V22 returns zero early).
 $conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS = 'defaultforfoundationcountry';
 $hookmanager = new class {

@@ -30,8 +30,13 @@ jobs:
           coverage: none
       - name: PHP syntax
         run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
-      - name: Whitespace (including the initial commit)
-        run: git diff-tree --check --root -r HEAD
+      - name: Whitespace (PR merge diff or pushed commit)
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            git diff HEAD^1 HEAD --check
+          else
+            git diff-tree --check --root -m -r HEAD
+          fi
       - name: Unit contracts and structure
         run: |
           php test/unit/run.php

@@ -154,10 +154,14 @@ $opts = array('invoice' => true, 'autocreate' => true, 'sendmail' => false, 'des
 $conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS = '0';
 $confirmed = $service->reader->previewSubscriptionWithOptions($user, stamp('2030-01-01'), true, false, null, true, $opts['description']);
 verify(!$confirmed['errors'], 'VAT confirmed invoice profile');
-$conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS = '7';
-$result = $service->book(1, $confirmed, $opts, $user, false);
-verify($result['status'] === 'skipped' && $result['message'] === 'MSMChangedConfirmation', 'VAT changed confirmation rejects booking '.DOL_VERSION);
-verify(!in_array('subscription', $db->events, true) && !$db->calls && $result['rollback'] === 'confirmed', 'VAT change causes no business API call');
+foreach (array('7', '7foo', ' 7bad', '0foo', '-1', 'garbage') as $setting) {
+	$conf->global->ADHERENT_VAT_FOR_SUBSCRIPTIONS = $setting;
+	$fresh = $service->reader->previewSubscriptionWithOptions($user, $confirmed['start'], true, false, $confirmed['end'], true, $opts['description']);
+	verify(in_array('MSMInvoiceVatIdUnsupported', $fresh['errors'], true) === (DOL_VERSION === '24.0.3'), 'PR6 real preflight rejects unsupported VAT '.DOL_VERSION.' '.$setting);
+	$result = $service->book(1, $confirmed, $opts, $user, false);
+	verify($result['status'] === 'skipped' && $result['message'] === 'MSMChangedConfirmation', 'VAT changed confirmation rejects booking '.DOL_VERSION.' '.$setting);
+	verify(!in_array('subscription', $db->events, true) && !$db->calls && $result['rollback'] === 'confirmed', 'VAT change causes no business API call');
+}
 // Fresh subscription-only consent remains usable even with the same tax setting.
 $opts['invoice'] = false; $opts['autocreate'] = false;
 $confirmed = $service->reader->previewSubscriptionWithOptions($user, stamp('2030-01-01'), false, false, null, false, $opts['description']);

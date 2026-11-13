@@ -59,8 +59,8 @@ class MsmInvoiceProfile
 		if (!MsmPreviewService::canCreateSubscriptionWithOptions($user, true, $sendmail)) { throw new RuntimeException('NotEnoughPermissions'); }
 		$policy = MsmCoreCompatibility::current();
 		$vatSetting = getDolGlobalString('ADHERENT_VAT_FOR_SUBSCRIPTIONS');
-		// E2: a V24 dictionary ID is not a rate and must never silently become zero.
-		if (DOL_VERSION === '24.0.3' && is_numeric($vatSetting) && (float) $vatSetting > 0) { throw new RuntimeException('MSMInvoiceVatIdUnsupported'); }
+		// E2 / PR6-01: accept only supported literals, never coerce malformed IDs to zero.
+		if (DOL_VERSION === '24.0.3' && !in_array($vatSetting, array('', '0', 'defaultforfoundationcountry'), true)) { throw new RuntimeException('MSMInvoiceVatIdUnsupported'); }
 		if ((int) $member->entity !== (int) $conf->entity || empty($conf->currency)) { throw new RuntimeException('MSMInvoiceProfileUnsupported'); }
 		$customer = $member->thirdparty ?? null;
 		if (!$customer && (!$autocreate || !empty($member->socid) || !$user->hasRight('societe', 'creer'))) { throw new RuntimeException('SubscriptionBulkThirdPartyMissing'); }
