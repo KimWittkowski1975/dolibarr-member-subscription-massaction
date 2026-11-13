@@ -10,10 +10,23 @@
 | V24 | **NOT QUALIFIED** | Source comparison only; separate runtime qualification required |
 | Production | **NOT QUALIFIED** | No release or production approval |
 
-The current implementation is `89b40b39337b66f7263ea1b629ee83ac667dd7a4`.
-The historical G2/G3 runtime-corrected baseline is
-`efb59b071a51373bf7e208de4043b1291beb7ad5`.
-PR #4 remains draft. The sections below retain historical development/test evidence;
+The completed Phase 4 implementation baseline is merge commit
+`dd68f2a4c2601f03b4588c0cca965292a2a1cb60`.
+[PR #4](https://github.com/iLLixM/dolibarr-member-subscription-massaction/pull/4)
+is **MERGED** following the final independent external review **APPROVED FOR MERGE**
+on feature HEAD `5630cf6034a32d3a2f6e940dde820a3523012e05`. The owner-reported
+external approval is not a formal GitHub review approval.
+**FS4-01, FS4-02, FS4-02-R1 and FS4-03: CLOSED.** The final evidence-mapping
+corrections are retained in `5630cf6`; the requirement matrix is unchanged by this update.
+GitHub CI on the merge commit passed for PHP 7.4 and 8.2
+([workflow 43410265664](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43410265664)).
+The merge does not constitute a release or production approval. Temporary module ID
+`584620` must be replaced or permanently reserved before public module distribution.
+
+The historical UI-cleanup implementation baseline is
+`89b40b39337b66f7263ea1b629ee83ac667dd7a4`; the historical G2/G3 runtime-corrected
+baseline is `efb59b071a51373bf7e208de4043b1291beb7ad5`.
+The sections below retain historical development/test evidence;
 the current gate table and the G2/G3/G4 closure sections supersede earlier pending-gate
 statements only within their expressly tested scopes.
 
@@ -133,9 +146,9 @@ The absence of one row, ID, relation or file is insufficient evidence that all e
 The implementation contains guards for R04–R09, R16 and P4-01–P4-05. The bounded G2/G3 evidence and accepted limitations below qualify only the stated V22 profiles. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. The engine list is deliberately bounded to tables reached by the inspected V22 paths; installed hooks or triggers may touch additional nontransactional tables. Directory and file checks reduce symlink exposure but cannot eliminate a privileged filesystem actor racing between verification and Core generation or transport. Unsupported profiles are rejected rather than silently approximated. G2/G3 qualify the bounded database/PDF/mail profiles below; broader profiles need separate evidence.
 
 The G2/G3 independent reviews and the implementation PHP matrix are complete.
-G4 is PASS – OWNER ACCEPTED for the tested V22.0.5 profile. The current
-documentation is prepared for a separate independent delta review; this is not
-a merge decision. V24 requires its own compatible installation and evidence.
+G4 is PASS – OWNER ACCEPTED for the tested V22.0.5 profile. The final independent
+external review approved the merge recorded above. V24 still requires its own
+compatible installation and evidence.
 Production, release and general-use approval remain separate decisions.
 
 Historical implementation-stage conclusion (superseded by the current gate overview):
@@ -317,8 +330,10 @@ This closes the tested V22 G4 scope only. The G2/G3 profile limits, Core SMTP
 121 uncertainty despite confirmed receipt, template-only G3-W02 decision, unexecuted
 connection-loss/external-writer/Multicompany scenarios and other residual risks above
 remain unchanged. V24 and production remain **NOT QUALIFIED**. The temporary module
-ID and release restrictions remain in force. PR #4 remains draft for separate
-independent delta review; no merge, release or production approval is asserted.
+ID and release restrictions remain in force. At this historical G4 documentation
+stage, PR #4 remained draft for a separate independent delta review; no merge,
+release or production approval was asserted then. The subsequent external approval
+and merge are recorded in the current status above; release and production remain unqualified.
 
 ## Final review follow-up — 2026-11-13
 

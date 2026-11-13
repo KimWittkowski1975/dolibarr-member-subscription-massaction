@@ -5,20 +5,29 @@ email paths are implemented for the tested Dolibarr V22.0.5 profile.
 G2: FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS.
 G3: APPROVED – PASS WITH DOCUMENTED LIMITATIONS.
 G4: PASS – OWNER ACCEPTED (owner-reported acceptance dated 2026-11-12).
-Dolibarr V24 and production: NOT QUALIFIED. No merge or release approval is implied.**
+Dolibarr V24 and production: NOT QUALIFIED. The merge does not constitute a release
+or production approval.**
 
 See [Phase 4 implementation validation](docs/phase4-implementation-validation.md)
 for the accepted scope, separate owner/automated evidence and retained limitations.
-The current implementation is `89b40b39337b66f7263ea1b629ee83ac667dd7a4`;
+The completed Phase 4 implementation baseline is merge commit
+`dd68f2a4c2601f03b4588c0cca965292a2a1cb60`.
+[PR #4](https://github.com/iLLixM/dolibarr-member-subscription-massaction/pull/4)
+is **MERGED** following the final external review **APPROVED FOR MERGE**.
+FS4-01, FS4-02, FS4-02-R1 and FS4-03 are **CLOSED**.
+GitHub CI on the merge commit passed on PHP 7.4/8.2
+([workflow 43410265664](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43410265664)).
+The historical UI-cleanup baseline is `89b40b39337b66f7263ea1b629ee83ac667dd7a4`.
 G4-LAYOUT-01 and G4-UX-01 are closed, and subsequent UI cleanups passed targeted
 regressions. The Phase 3B
 acceptance below is historical and does not replace final Phase 4 acceptance.
 
 Real booking/database integration and authenticated HTTP replay tests have been
 performed; manual browser acceptance passed 9/9. The owner confirmed receipt of the
-ten original emails. The independent final review concluded **APPROVED WITH CONDITIONS**;
-its documentation and mail-comment findings are addressed by this focused follow-up,
-subject to final diff/CI verification. This is not unrestricted production approval.
+ten original emails. The historical Phase 3B independent final review concluded
+**APPROVED WITH CONDITIONS**; its documentation and mail-comment findings were
+addressed by the subsequent follow-up. This historical acceptance is not
+unrestricted production approval.
 See [Phase 3B validation](docs/phase3b-validation.md) for evidence, limitations and
 the owner's scoped residual-risk acceptance.
 
