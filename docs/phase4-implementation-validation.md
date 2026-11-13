@@ -92,8 +92,10 @@ Version-independent `php test/unit/run.php`: **98 PASS**, including language-key
 parity, exact-version policy and rejection before DB access.
 `node test/unit/loading.js`: **6 PASS**, synthetic DOM only.
 PHP lint: **30 files PASS**. `git diff --check` and committed whitespace check: PASS.
-The existing PHP 7.4/8.2 CI workflow is unchanged; PHP 7.4 execution and new GitHub
-CI were **NOT EXECUTED** locally (no push authorized).
+At the historical C2.1 local-only stage, the PHP 7.4/8.2 CI workflow was unchanged;
+PHP 7.4 execution and new GitHub CI were **NOT EXECUTED** at that time (no push
+was then authorized). The subsequent C2.2/C2.3 and PR #6 evidence below supersedes
+that missing-CI status, without changing the original local test results.
 
 R16 tests execute each pinned Core's real end-update method using an in-memory DB
 adapter. The identical older-longer overlap yields 2030-06-30 on V22 and 2030-12-31
@@ -118,6 +120,58 @@ connection/COMMIT loss, Multicompany and additional tax/product profiles.
 Temporary module ID, release limits, SMTP diagnostic 121 and prior risk boundaries
 remain. G3-W02 remains template configuration only, not a module finding.
 Next: independent C2.1 review, then separately authorized bounded V24 T3/T4 tests.
+
+## PR 6 follow-up: PR6-01 to PR6-03
+
+Subsequent review corrections, 2026-11-13, implementation commit
+`c67b5cd0bc2ef34a23012e870928dad3bbaa730b`:
+
+- **PR6-01:** V24.0.3 invoice preflight now accepts only the exact supported
+  settings: unset/empty, `0`, `defaultforfoundationcountry`. All other values
+  reject with the existing DE/EN key and clarified setting-level message.
+  Tests cover positive IDs, `7foo`, ` 7bad`, `+7bad`, decimals/exponents,
+  negative values, alternate zero representations, whitespace and unknown text.
+  The real profile/preview rejection is exercised; changed confirmation is
+  rejected before any synthetic business API call. V22's previous behavior and
+  subscription-only booking remain covered. This tightens E2, without adding a
+  tax dictionary resolver or changing E1–E4/O1–O7.
+- **PR6-02:** PR CI checks `git diff HEAD^1 HEAD --check`, comparing the test
+  merge with its first parent. Push CI retains the initial-commit check and adds
+  `-m` for merge parents: `git diff-tree --check --root -m -r HEAD`.
+  An isolated temporary Git repository reproduced a two-parent test merge with
+  trailing whitespace: the previous command exited 0; the new PR and push
+  commands exited nonzero and detected the error. No project history was merged
+  or rewritten. CI matrix and all runner commands remain intact.
+- **PR6-03:** The previous local-only CI limitation is now explicitly historical.
+  The initial expanded CI on `1c7903d71fbae08b631c85cb48c375bdb2a92536` passed
+  [push run 43501212921](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43501212921)
+  and [PR run 43501309268](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43501309268).
+  The corrected implementation `c67b5cd` also passed all three jobs in
+  [push run 43506166580](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43506166580)
+  and [PR run 43506174704](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43506174704).
+
+| PHP | Pinned Dolibarr Core | Initial expanded CI | Corrected implementation CI |
+| --- | --- | --- | --- |
+| 7.4 | V22.0.5 / `88ad132763be45e9620128c1830e41493e1cdd05` | PASS | PASS |
+| 8.2 | V22.0.5 / `88ad132763be45e9620128c1830e41493e1cdd05` | PASS | PASS |
+| 8.2 | V24.0.3 / `5c6c7ff6a5112413b1c27221c8d11750afad56f8` | PASS | PASS |
+
+Local PHP 8.2 regression on the corrected implementation: 388 preview,
+208 additional booking/mail, **59 profile**, **76 invoice**, 17 mail adapter,
+16 PDF adapter and 13 post-commit assertions per Core. Included assertions are
+not summed again. Standalone contracts/language parity: 98 PASS; synthetic
+JavaScript: 6 PASS; PHP lint and full PR diff whitespace: PASS.
+Commands remain those in the C2.1 section; `invoice` includes booking/preview.
+Sanitized local command/negative-test evidence is retained outside the repository
+in `/home/marcel/dolibarr-c21-validation-20261113/pr6-followup-local.json`.
+The synthetic Git fixture was temporary; its construction and command results
+are recorded in that evidence. No real database connection, business write,
+Core PDF or SMTP was exercised.
+
+This is implementation and CI evidence for targeted independent follow-up review,
+not independent acceptance or merge approval. PR #6 remains Draft.
+**Real V24 integration and production remain NOT QUALIFIED.** Existing V22
+qualification limits, temporary module ID and all documented risks remain.
 
 ## Scope and provenance
 
