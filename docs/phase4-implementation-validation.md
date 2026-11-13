@@ -319,3 +319,30 @@ connection-loss/external-writer/Multicompany scenarios and other residual risks 
 remain unchanged. V24 and production remain **NOT QUALIFIED**. The temporary module
 ID and release restrictions remain in force. PR #4 remains draft for separate
 independent delta review; no merge, release or production approval is asserted.
+
+## Final review follow-up — 2026-11-13
+
+FS4-01 adds an EN/DE warning in preview and confirmation when V22 invoice validation
+may change an existing linked customer's classification. The Core target is client
+1, or client 3 for an existing prospect (2/3) when prospect/customer support is not
+disabled. Existing client 1 is unchanged; client 3 changes only when that support is
+disabled. Invoice-off and new-customer plans have no existing-customer warning.
+`SOCIETE_DISABLE_PROSPECTSCUSTOMERS` is included in the server-side profile settings,
+so the normal re-evaluation/fingerprint check rejects stale confirmed profiles.
+No classification write, invoice validation or transaction behavior was changed.
+The existing contact-creation warning remains independent.
+
+FS4-02 reviews all 71 requirements and updates the current evidence fields of 70
+rows. All 18 columns, 71 IDs and the first ten historical columns are preserved.
+The coverage legend distinguishes real G2/G3 evidence, automated/synthetic cases
+and Owner-reported manual browser acceptance (M01–M04 per browser; M05 overall).
+The G4 decision remains PASS – OWNER ACCEPTED. Unexecuted risk scenarios and
+V24/production qualification remain open; this follow-up does not address FS4-03.
+
+Targeted FS4 checks: PHP lint, 388 included preview/calendar assertions, 25 invoice
+profile assertions, 179 booking/mail assertions and 87 standalone/parity assertions
+passed. Chromium/Firefox passed the live read-only preview/confirmation flow and
+the labeled offline EN/DE classification matrix. The live edit check waits for
+redirect completion; the initial immediate visibility check was a harness timing
+issue, not a module change. All 19 monitored business tables remained unchanged.
+CSV integrity and evidence-reference checks passed; no new business operations.

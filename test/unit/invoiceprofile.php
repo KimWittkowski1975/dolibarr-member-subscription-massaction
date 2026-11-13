@@ -59,4 +59,9 @@ foreach (array('processing', 'done') as $phase) {
 $old['phase'] = 'confirm'; $new = msmUpgradePreview($old);
 verify($new['phase'] === 'preview' && $new['revision'] === 8 && !$new['options']['invoice'], 'old confirmation needs fresh consent');
 verify(msmUpgradePreview($new) === $new, 'format migration idempotent');
+$conf->global->SOCIETE_DISABLE_PROSPECTSCUSTOMERS = 0;
+$initial = $profile->resolve($member, $user, false, false);
+$conf->global->SOCIETE_DISABLE_PROSPECTSCUSTOMERS = 1;
+$changed = $profile->resolve($member, $user, false, false);
+verify($initial !== $changed && $changed['settings']['SOCIETE_DISABLE_PROSPECTSCUSTOMERS'] === '1', 'customer classification configuration invalidates confirmed profile');
 echo ($passed - $before)." invoice profile assertions passed (synthetic; no database).\n";

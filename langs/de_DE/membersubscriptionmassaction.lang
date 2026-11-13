@@ -118,3 +118,4 @@ MSMRollbackUnconfirmed=Unbestätigt; die aufgeführten Kennungen vor jedem neuen
 MSMDiagnosticStage=Letzte Diagnosestufe
 MSMUnconfirmedIdentifier=unbestätigte Kennung
 MSMProcessingNotice=Beitrag, Rechnung und Dokumente werden verarbeitet. Lassen Sie diese Seite geöffnet.
+MSMCustomerClassificationMayChange=Die Validierung dieser Rechnung kann die Kunden-/Interessentenklassifizierung des verknüpften Geschäftspartners gemäß den Dolibarr-Einstellungen ändern.

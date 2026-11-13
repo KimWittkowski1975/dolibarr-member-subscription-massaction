@@ -40,6 +40,17 @@ function msmInvoicePlanDetails(array $row)
 		dol_print_date(msmReadDate($plan['date']), 'day'), price($plan['vat']).'%', $product, $term);
 }
 
+/** Mirror V22 setAsCustomer without modifying the confirmed customer. */
+function msmCustomerClassificationMayChange(array $row)
+{
+	$plan = $row['invoice'] ?? array();
+	if (empty($plan['customer_id']) || !empty($plan['create_customer'])) { return false; }
+	$client = (int) ($plan['customer_snapshot']['client'] ?? 0);
+	$disableProspects = (int) ($plan['settings']['SOCIETE_DISABLE_PROSPECTSCUSTOMERS'] ?? 0);
+	$target = (($client === 2 || $client === 3) && !$disableProspects) ? 3 : 1;
+	return $client !== $target;
+}
+
 /** Warn when the confirmed Core setting may create a contact with a new third party. */
 function msmInvoiceMayCreateContact(array $state)
 {
@@ -97,6 +108,7 @@ function msmRenderPreview(array $state, $key)
 		$html .= '<td>'.dol_escape_htmltag($row['thirdparty']).'</td><td>'.msmText($row['status'] === 'error' ? 'SubscriptionBulkError' : ($row['status'] === 'warning' ? 'SubscriptionBulkWarning' : 'SubscriptionBulkReady')).'</td><td>';
 		foreach ($row['notices'] as $notice) { $html .= '<div>'.msmText($notice).'</div>'; }
 		if (!empty($row['invoice'])) {
+			if (!empty($state['options']['invoice']) && msmCustomerClassificationMayChange($row)) { $html .= '<div class="warning">'.msmText('MSMCustomerClassificationMayChange').'</div>'; }
 			$html .= '<div>'.msmInvoicePlanDetails($row).'</div>';
 		}
 		if ($row['quantity'] == 1 && $row['unit'] === 'd' && $row['end'] > 0) { $html .= '<div>'.msmText('MSMOneDay', dol_print_date($row['end'], 'day')).'</div>'; }

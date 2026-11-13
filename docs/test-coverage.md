@@ -60,3 +60,25 @@ exactly-once guarantee or unrestricted production approval is claimed. Synthetic
 mail-failure/hook tests do not become real SMTP-failure tests through successful receipts.
 The owner accepted the documented R05–R09 boundaries for Phase 3B on V22.0.5; these
 limits remain in force. No new requirement matrix or test execution is implied.
+
+## Phase 4 completion and final-review provenance
+
+Use `phase4-implementation-validation.md` for the bounded G2/G3/G4 evidence.
+`G2-*` names real V22 Core/DB/PDF cases; G2-05 is a CLI mixed batch, not a
+browser booking. `G3-*` separates real delivery/owner receipt from T2 synthetic
+negative PDF/mail/hook cases. Core diagnostic 121 remains uncertain despite receipt.
+
+`G4-01`–`G4-08` identify browser/UX areas, not additional business-write tests.
+Owner-reported manual browser acceptance on 2026-11-12 was 9/9 PASS in Chrome
+157.0.8103.38 and Firefox ESR 153.6.0esr: M01 maps to G4-06, M02 to G4-01/02/03/07,
+M03 to G4-04/05/08, M04 to G4-07; M05 is the overall PASS – OWNER ACCEPTED decision,
+not separate evidence for every requirement. Matrix references apply only to the
+named UI aspect. Automated Playwright checks and labeled synthetic result/rendering
+fixtures remain separate evidence; none establishes new rollback, SMTP fault or
+Multicompany qualification. Historical Phase 3 evidence and original matrix columns
+are retained; current profile limits supersede obsolete blanket Phase 4 deferrals.
+
+FS4-01 classification warnings use the confirmed customer/configuration snapshot.
+The profile setting is re-resolved in the existing fingerprint path before booking.
+The client 0/1/2/3 × setting 0/1 × invoice off/on matrix is synthetic, not a new
+live classification write. V24 and production remain NOT QUALIFIED.

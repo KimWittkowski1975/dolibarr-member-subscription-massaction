@@ -307,5 +307,40 @@ foreach (array('en_US', 'de_DE') as $locale) {
   verify(strpos($rendered,'<script>')===false,'V22 translated renderer escapes hostile labels '.$locale);
  }
 }
+// FS4-01: actual V22 classification rules, invoice off/on, both renderers and mixed rows.
+foreach (array(0, 1) as $disabled) {
+ foreach (array(0, 1, 2, 3) as $client) {
+  foreach (array(false, true) as $selected) {
+   $case = $ui; $case['phase'] = 'confirm'; $case['options']['invoice'] = $selected;
+   $case['rows'] = array(1 => $display, 2 => $display);
+   $case['rows'][1]['invoice']['customer_id'] = 4;
+   $case['rows'][1]['invoice']['create_customer'] = false;
+   $case['rows'][1]['invoice']['customer_snapshot']['client'] = $client;
+   $case['rows'][1]['invoice']['settings']['SOCIETE_DISABLE_PROSPECTSCUSTOMERS'] = (string) $disabled;
+   $case['rows'][2]['invoice']['customer_id'] = 5;
+   $case['rows'][2]['invoice']['create_customer'] = false;
+   $case['rows'][2]['invoice']['customer_snapshot']['client'] = 1;
+   $case['rows'][2]['invoice']['settings']['SOCIETE_DISABLE_PROSPECTSCUSTOMERS'] = (string) $disabled;
+   $expected = $selected && ($client === 0 || $client === 2 || ($client === 3 && $disabled));
+   $warning = msmText('MSMCustomerClassificationMayChange');
+   foreach (array('preview', 'confirm') as $phase) {
+    $case['phase'] = $phase;
+    $rendered = $phase === 'preview' ? msmRenderPreview($case, str_repeat('a',32)) : msmRenderBooking($case, str_repeat('a',32));
+    verify(substr_count($rendered, $warning) === ($expected ? 1 : 0), 'classification warning mixed rows '.$phase.$client.$disabled.(int) $selected);
+    verify(strpos($rendered, '<script>') === false && strpos($rendered, 'P-&lt;7&gt;') !== false, 'classification warning keeps renderer escaping');
+   }
+  }
+ }
+}
+$newCustomerRow = $case['rows'][1]; $newCustomerRow['invoice']['create_customer'] = true;
+verify(!msmCustomerClassificationMayChange($newCustomerRow), 'classification warning excludes new customer');
+$savedWarning = $langs->tab_translate['MSMCustomerClassificationMayChange'];
+$langs->tab_translate['MSMCustomerClassificationMayChange'] = '<classification & warning>';
+foreach (array('preview', 'confirm') as $phase) {
+ $case['phase'] = $phase;
+ $rendered = $phase === 'preview' ? msmRenderPreview($case, str_repeat('a',32)) : msmRenderBooking($case, str_repeat('a',32));
+ verify(strpos($rendered, '&lt;classification &amp; warning&gt;') !== false && strpos($rendered, '<classification & warning>') === false, 'classification warning translation escaped '.$phase);
+}
+$langs->tab_translate['MSMCustomerClassificationMayChange'] = $savedWarning;
 $langs = $renderLangs;
 echo ($passed - $baseline)." booking/mail assertions passed (synthetic transactions and transports only).\n";

@@ -118,3 +118,4 @@ MSMRollbackUnconfirmed=Unconfirmed; reconcile the listed identifiers before any 
 MSMDiagnosticStage=Last diagnostic stage
 MSMUnconfirmedIdentifier=unconfirmed identifier
 MSMProcessingNotice=Booking, invoice and document processing is in progress. Keep this page open.
+MSMCustomerClassificationMayChange=Validating this invoice may change the linked third party's customer/prospect classification according to Dolibarr settings.

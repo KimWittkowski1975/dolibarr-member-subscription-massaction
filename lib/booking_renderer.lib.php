@@ -29,7 +29,10 @@ function msmRenderBooking(array $state, $key, array $access = array())
 		$html .= '<td>'.dol_escape_htmltag($row['description']).'</td><td>';
 		if ($confirm) {
 			foreach ($row['notices'] as $notice) { $html .= '<div>'.msmText($notice).'</div>'; }
-			if (!empty($row['invoice'])) { $html .= '<div>'.msmInvoicePlanDetails($row).'</div>'; }
+			if (!empty($row['invoice'])) {
+				if (!empty($state['options']['invoice']) && msmCustomerClassificationMayChange($row)) { $html .= '<div class="warning">'.msmText('MSMCustomerClassificationMayChange').'</div>'; }
+				$html .= '<div>'.msmInvoicePlanDetails($row).'</div>';
+			}
 			if ($row['quantity'] == 1 && $row['unit'] === 'd') { $html .= '<div>'.msmText('MSMOneDay', dol_print_date($row['end'], 'day')).'</div>'; }
 			foreach ($row['overlaps'] as $overlap) { $html .= '<div>#'.((int) $overlap['id']).' '.dol_escape_htmltag($overlap['start'].' – '.$overlap['end']).'</div>'; }
 			if (!$row['errors']) { $counts['success']++; $sum += $row['amount']; }
