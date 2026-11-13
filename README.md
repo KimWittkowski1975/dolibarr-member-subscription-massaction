@@ -1,13 +1,17 @@
 # Member Subscription Massaction for Dolibarr
 
 **Unreleased Phase 4: optional invoice, post-commit PDF and attached confirmation
-email paths are implemented. G2 is complete for the tested Dolibarr V22.0.5 profile;
-G3 is complete with documented limitations. Automated G4 pre-acceptance has been
-performed; final owner browser/UX acceptance remains pending. V24 is not qualified.
-No production approval.**
+email paths are implemented for the tested Dolibarr V22.0.5 profile.
+G2: FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS.
+G3: APPROVED – PASS WITH DOCUMENTED LIMITATIONS.
+G4: PASS – OWNER ACCEPTED (owner-reported acceptance dated 2026-11-12).
+Dolibarr V24 and production: NOT QUALIFIED. No merge or release approval is implied.**
 
 See [Phase 4 implementation validation](docs/phase4-implementation-validation.md)
-for the accepted scope, historical evidence and retained limitations. The Phase 3B
+for the accepted scope, separate owner/automated evidence and retained limitations.
+The current implementation is `89b40b39337b66f7263ea1b629ee83ac667dd7a4`;
+G4-LAYOUT-01 and G4-UX-01 are closed, and subsequent UI cleanups passed targeted
+regressions. The Phase 3B
 acceptance below is historical and does not replace final Phase 4 acceptance.
 
 Real booking/database integration and authenticated HTTP replay tests have been
@@ -75,8 +79,9 @@ second confirmation form into the core list. It appends an option with return 0.
 
 Recommended desktop screen resolution: **1440 × 900 pixels or higher**.
 The targeted minimum browser viewport for regular desktop use is **1024 × 768 pixels**, qualified
-by focused headless Chromium/Firefox layout checks on Dolibarr V22.0.5. Final
-visual and owner acceptance remains pending.
+by focused headless Chromium/Firefox layout checks on Dolibarr V22.0.5.
+The owner reports completed visual/UX acceptance for the tested profile; this is
+separate evidence from the automated viewport measurements.
 
 These are module-specific conditions, not official Dolibarr minimum requirements.
 The usable browser viewport can be smaller than the screen resolution. Wide member
@@ -124,7 +129,8 @@ Run `php test/unit/run.php` and
 `php test/unit/invoice.php`, `php test/unit/invoicepdf.php`,
 `php test/unit/postcommit.php` and `node test/unit/loading.js` (no dependencies
 or database bootstrap). The booking runner includes the existing preview runner and requires a V22.0.5 checkout.
-See [Phase 3B validation](docs/phase3b-validation.md) for current evidence and limitations;
+See [Phase 4 implementation validation](docs/phase4-implementation-validation.md) for current acceptance and limitations;
+[Phase 3B validation](docs/phase3b-validation.md) retains historical subscription-only evidence;
 [Phase 3A validation](docs/phase3a-validation.md) preserves historical evidence.
 Lint PHP files and run `git diff --check`; CI also checks the initial commit.
 Synthetic tests alone do not prove browser integration; the separate owner-performed

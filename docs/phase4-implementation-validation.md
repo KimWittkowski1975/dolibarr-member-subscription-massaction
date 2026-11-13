@@ -1,18 +1,20 @@
 # Phase 4 implementation validation
 
-## Current gate status — 2026-11-11
+## Current gate status — 2026-11-13
 
-| Gate | Independently reviewed status | Scope / next step |
+| Gate | Current status / provenance | Scope / next step |
 | --- | --- | --- |
 | G2 | **FINAL APPROVED – PASS WITH DOCUMENTED LIMITATIONS** | Completed for the bounded Dolibarr V22.0.5 profile below |
 | G3 | **APPROVED – PASS WITH DOCUMENTED LIMITATIONS** | Completed for the controlled V22 PDF/mail profile below; SMTP status uncertainty retained |
-| G4 | **PENDING** | Next acceptance step: browser/UX and owner acceptance |
+| G4 | **PASS – OWNER ACCEPTED** | Owner-reported manual acceptance on 2026-11-12; subsequent targeted UI regressions passed |
 | V24 | **NOT QUALIFIED** | Source comparison only; separate runtime qualification required |
 | Production | **NOT QUALIFIED** | No release or production approval |
 
-The accepted implementation baseline is `efb59b071a51373bf7e208de4043b1291beb7ad5`.
+The current implementation is `89b40b39337b66f7263ea1b629ee83ac667dd7a4`.
+The historical G2/G3 runtime-corrected baseline is
+`efb59b071a51373bf7e208de4043b1291beb7ad5`.
 PR #4 remains draft. The sections below retain historical development/test evidence;
-the current gate table and the G2/G3 closure sections supersede earlier pending-gate
+the current gate table and the G2/G3/G4 closure sections supersede earlier pending-gate
 statements only within their expressly tested scopes.
 
 ## Scope and provenance
@@ -106,8 +108,11 @@ The GitHub workflow includes the focused Phase 4 runners in its PHP 7.4 and PHP 
 
 G2 and G3 are completed and independently approved for the bounded V22.0.5 profiles
 below. Real SMTP delivery and owner mailbox/attachment checks have been executed.
+G4 manual browser/UX acceptance is complete as reported by the owner; see the
+G4 closure below. Automated browser checks do not by themselves prove a real
+BFCache restoration or manual visual acceptance.
 The following remain **NOT EXECUTED / NOT QUALIFIED**:
-- complete Chrome/Firefox UX, keyboard, focus, responsive and BFCache acceptance;
+
 - real connection loss, uncertain physical COMMIT acknowledgement and external writers;
 - arbitrary installed third-party hooks, Multicompany and unsupported tax/stock profiles;
 - V24 runtime/schema qualification and production acceptance.
@@ -127,7 +132,11 @@ The absence of one row, ID, relation or file is insufficient evidence that all e
 
 The implementation contains guards for R04–R09, R16 and P4-01–P4-05. The bounded G2/G3 evidence and accepted limitations below qualify only the stated V22 profiles. Core nesting, enabled triggers, shared customer/product state, numbering models, nontransactional effects, document hooks, filesystem replacement races and external transports cannot be established by doubles. The engine list is deliberately bounded to tables reached by the inspected V22 paths; installed hooks or triggers may touch additional nontransactional tables. Directory and file checks reduce symlink exposure but cannot eliminate a privileged filesystem actor racing between verification and Core generation or transport. Unsupported profiles are rejected rather than silently approximated. G2/G3 qualify the bounded database/PDF/mail profiles below; broader profiles need separate evidence.
 
-The G2/G3 independent reviews and the implementation PHP matrix are complete. G4 browser/UX and owner acceptance are the next open gate. V24 requires its own compatible installation and evidence. Production or general-use approval is a separate decision.
+The G2/G3 independent reviews and the implementation PHP matrix are complete.
+G4 is PASS – OWNER ACCEPTED for the tested V22.0.5 profile. The current
+documentation is prepared for a separate independent delta review; this is not
+a merge decision. V24 requires its own compatible installation and evidence.
+Production, release and general-use approval remain separate decisions.
 
 Historical implementation-stage conclusion (superseded by the current gate overview):
 **PHASE 4 IMPLEMENTATION COMPLETE – SYNTHETICALLY VALIDATED – READY FOR INDEPENDENT REVIEW**
@@ -244,7 +253,8 @@ unrelated rows and payment/bank data were unchanged.
 Independent acceptance: **G3 APPROVED – PASS WITH DOCUMENTED LIMITATIONS** for the tested V22 profile. Additional real sends or bookings are unnecessary.
 The received MIME headers have not been independently inspected; the module/HTTP
 PDF MIME is application/pdf and the owner confirmed the received attachment bytes.
-G4 browser/UX remains a separate gate. No production/Core code change, configuration
+At the historical G3 closure, G4 browser/UX remained a separate gate; its later
+owner acceptance is recorded below. During G3, no production/Core code change, configuration
 change, Git publication, automatic resend or restore was performed.
 
 The owner completed both mailbox checks: English subjects and member-name
@@ -264,3 +274,48 @@ G3-W02 concerns Dolibarr template configuration only and is not a module defect,
 validation failure, development task or G4 blocker. It is excluded from further
 module-development work. No template or implementation change is requested or made
 under this decision; the historical technical delivery evidence remains unchanged.
+
+## G4 closure — owner acceptance 2026-11-12; consolidated 2026-11-13
+
+**G4 PASS – OWNER ACCEPTED** applies to the tested Dolibarr V22.0.5 profile.
+The manual results below are reported by the owner, not a claim that the agent
+performed or independently observed those manual steps.
+
+| Owner item | Chrome 157.0.8103.38 | Firefox ESR 153.6.0esr | Evidence provenance |
+| --- | --- | --- | --- |
+| M01 — real BFCache restoration | PASS | PASS | Owner-reported manual acceptance |
+| M02 — visual/business preview and layout | PASS | PASS | Owner-reported manual acceptance |
+| M03 — result/warning comprehension | PASS | PASS | Owner-reported manual acceptance |
+| M04 — visible focus and native controls | PASS | PASS | Owner-reported manual acceptance |
+| M05 — overall acceptance decision | — | — | PASS — owner decision for the tested profile |
+
+Separate automated evidence used Chromium Headless Shell 158.0.8127.18 and
+Playwright-Firefox 159.0. The G4-LAYOUT-01 correction was qualified at 1440, 1280,
+1024, 768 and 390 px, with an additional exact 1024 × 768 viewport check.
+**G4-LAYOUT-01: CLOSED** (`d9b45f87bf01b4bab4587a5f9d4cedc6b2da47c7`).
+The wider single-line description field passed targeted checks at 1440, 1024,
+768 and 390 px. **G4-UX-01: CLOSED**
+(`1377b417537c740780130650b67d80907d2f0d5e`).
+
+Subsequent presentation-only cleanups removed technical model labels while retaining
+internal planning, clarified EN/DE preview notices and introduced semantic option
+rows (`5381366c961b0603cf2e384902037083b1922282`). The final compact, borderless,
+left-aligned confirmation option table was checked in both engines at 1440 and
+1024 px (`89b40b39337b66f7263ea1b629ee83ac667dd7a4`). These targeted regressions
+passed without invalidating the owner acceptance. Date labels, business logic,
+permissions and delivery behavior were unchanged. The 19 monitored business tables
+remained unchanged during these read-only browser checks. Result fixtures for
+otherwise unavailable sessions remained explicitly synthetic, with simplified CSS.
+
+GitHub PHP 7.4/8.2 CI on the implementation commit `89b40b3` passed for both
+[PR workflow 43335309353](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43335309353)
+and [push workflow 43335224395](https://github.com/iLLixM/dolibarr-member-subscription-massaction/actions/runs/43335224395).
+CI and automated browser results are separate from the owner-reported manual evidence.
+No browser, booking, PDF or SMTP test was repeated for this documentation update.
+
+This closes the tested V22 G4 scope only. The G2/G3 profile limits, Core SMTP
+121 uncertainty despite confirmed receipt, template-only G3-W02 decision, unexecuted
+connection-loss/external-writer/Multicompany scenarios and other residual risks above
+remain unchanged. V24 and production remain **NOT QUALIFIED**. The temporary module
+ID and release restrictions remain in force. PR #4 remains draft for separate
+independent delta review; no merge, release or production approval is asserted.
